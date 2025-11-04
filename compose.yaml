@@ -11,7 +11,6 @@ services:
       - ./backend/.env
     volumes:
       - ./backend:/app
-      - /app/node_modules
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
@@ -35,4 +34,23 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+
+  mongodb:
+    image: mongo:7.0
+    container_name: biztrack-mongodb
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: secret
+      MONGO_INITDB_DATABASE: biztrack
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    network_mode: host
+
+volumes:
+  mongodb_data:
 
