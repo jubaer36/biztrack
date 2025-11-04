@@ -43,6 +43,14 @@ jspm_packages/
 # dotenv environment variables file
 .env
 
+# Uploaded files
+uploads/**/*
+!uploads/.gitkeep
+
+# Vector store data
+vector_store/*
+!vector_store/.gitkeep
+
 # Parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

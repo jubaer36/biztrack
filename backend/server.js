@@ -5,6 +5,9 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
+const uploadsRoutes = require('./routes/uploads');
+const { router: langchainRoutes } = require('./routes/langchain');
+const { router: ragRoutes } = require('./routes/rag');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -28,6 +31,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/uploads', uploadsRoutes);
+app.use('/api/langchain', langchainRoutes);
+app.use('/api/rag', ragRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
