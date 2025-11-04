@@ -28,7 +28,55 @@ A full-stack business management application with Next.js frontend and Express.j
 
 ### Prerequisites
 - Node.js (v18 or higher)
+- Docker and Docker Compose
 - Supabase account and project
+
+### Quick Start with Docker
+
+1. Create a `.env` file in the `backend` directory with your Supabase credentials:
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+   Update with your Supabase URL and key.
+
+2. Create a `.env.local` file in the `frontend` directory (if not exists):
+   ```
+   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   ```
+
+3. Run the application with Docker Compose:
+
+   **Build and start containers:**
+   ```bash
+   docker compose up --build
+   ```
+   Use this when you've made changes to Dockerfiles, dependencies, or are starting fresh.
+   - Rebuilds images from scratch
+   - Starts containers in attached mode (shows logs in terminal)
+   - Press `Ctrl+C` to stop
+
+   **Start in detached mode:**
+   ```bash
+   docker compose up -d
+   ```
+   Use this for normal startup after initial build.
+   - Starts containers in the background
+   - Doesn't show logs in terminal
+   - Services continue running after closing terminal
+
+   **Stop containers:**
+   ```bash
+   docker compose down
+   ```
+
+   **View logs:**
+   ```bash
+   docker compose logs -f
+   ```
+
+4. Access the application:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:5000/api
 
 ### Backend Setup
 
