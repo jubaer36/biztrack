@@ -7,7 +7,7 @@ COPY package*.json ./
 RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 30000 && \
     npm config set fetch-timeout 60000 && \
-    npm install --legacy-peer-deps
+    npm ci --legacy-peer-deps
 
 # Copy source
 COPY . .
