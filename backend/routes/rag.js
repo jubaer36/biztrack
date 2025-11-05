@@ -208,7 +208,7 @@ router.post('/query', authenticateUser, async (req, res) => {
         // Initialize Groq LLM
         const llm = new ChatGroq({
             apiKey: GROQ_API_KEY,
-            model: 'llama-3.1-8b-instant',
+            model: 'llama-3.3-70b-specdec', // Using latest supported model
             temperature: 0.7,
         });
 

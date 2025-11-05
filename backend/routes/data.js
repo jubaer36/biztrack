@@ -3,8 +3,7 @@ const multer = require('multer');
 const mongoose = require('mongoose');
 const XLSX = require('xlsx');
 const Business = require('../models/Business');
-const supabase = require('../config/supabase');
-const { supabaseAdmin } = require('../config/supabase');
+const { supabase, supabaseAdmin } = require('../config/supabase');
 const router = express.Router();
 
 // Configure multer for file uploads

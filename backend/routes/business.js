@@ -1,6 +1,6 @@
 const express = require('express');
 const Business = require('../models/Business');
-const supabase = require('../config/supabase');
+const { supabase } = require('../config/supabase');
 const router = express.Router();
 
 // Middleware to verify authentication

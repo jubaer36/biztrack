@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import DataMapper from '@/components/DataMapper';
 
 interface Business {
     id: string;
@@ -531,6 +532,15 @@ export default function BusinessDetailPage() {
                                     )}
                                 </div>
                             </div>
+
+                            {/* AI Data Mapping Section */}
+                            <DataMapper 
+                                businessId={businessId} 
+                                onMappingComplete={() => {
+                                    // Refresh data when mapping completes
+                                    fetchBusinessData();
+                                }}
+                            />
 
                             {/* Collections/Data Section */}
                             <div className="bg-white shadow overflow-hidden sm:rounded-lg">

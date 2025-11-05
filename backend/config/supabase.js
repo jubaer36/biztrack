@@ -40,5 +40,7 @@ const supabaseAdmin = createClient(
     }
 );
 
-module.exports = supabase;
-module.exports.supabaseAdmin = supabaseAdmin;
+module.exports = {
+    supabase,
+    supabaseAdmin
+};

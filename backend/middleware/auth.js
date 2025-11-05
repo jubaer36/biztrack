@@ -1,4 +1,4 @@
-const supabase = require('../config/supabase');
+const { supabase } = require('../config/supabase');
 
 // Authentication middleware
 const authenticateUser = async (req, res, next) => {
