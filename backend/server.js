@@ -7,8 +7,10 @@ require('dotenv').config();
 const { connectDB } = require('./config/mongodb');
 const authRoutes = require('./routes/auth');
 const uploadsRoutes = require('./routes/uploads');
-const { router: langchainRoutes } = require('./routes/langchain');
-const { router: ragRoutes } = require('./routes/rag');
+const langchainModule = require('./routes/langchain');
+const ragModule = require('./routes/rag');
+const langchainRoutes = langchainModule.router;
+const ragRoutes = ragModule.router;
 const businessRoutes = require('./routes/business');
 const dataRoutes = require('./routes/data');
 
@@ -21,7 +23,7 @@ connectDB();
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    max: 1000, // limit each IP to 1000 requests per windowMs for development
     message: 'Too many requests from this IP, please try again later.'
 });
 
@@ -39,7 +41,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/langchain', langchainRoutes);
-app.use('/api/rag', ragRoutes);
+// app.use('/api/rag', ragRoutes);
 app.use('/api/businesses', businessRoutes);
 app.use('/api/data', dataRoutes);
 

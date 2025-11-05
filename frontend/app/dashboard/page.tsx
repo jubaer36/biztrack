@@ -76,12 +76,20 @@ export default function DashboardPage() {
                                 <div className="bg-white p-6 rounded-lg shadow">
                                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Quick Actions</h3>
                                     <p className="text-sm text-gray-600">Manage your business operations from here.</p>
-                                    <button
-                                        onClick={() => router.push('/bizmind')}
-                                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                                    >
-                                        Go to BizMind
-                                    </button>
+                                    <div className="mt-4 space-y-2">
+                                        <button
+                                            onClick={() => router.push('/bizmind')}
+                                            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                                        >
+                                            Go to BizMind
+                                        </button>
+                                        <button
+                                            onClick={() => router.push('/businesses')}
+                                            className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                                        >
+                                            Go to My Businesses
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="bg-white p-6 rounded-lg shadow">

@@ -12,11 +12,6 @@ interface Business {
     updated_at: string;
 }
 
-interface BusinessFormData {
-    name: string;
-    description: string;
-}
-
 interface SheetData {
     sheetName: string;
     collectionName: string;
@@ -35,7 +30,7 @@ interface UploadResult {
     error?: string;
 }
 
-export default function BusinessDetailPage() {
+export default function BusinessRawDataPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
     const params = useParams();
@@ -44,10 +39,7 @@ export default function BusinessDetailPage() {
     const [business, setBusiness] = useState<Business | null>(null);
     const [loadingBusiness, setLoadingBusiness] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [formData, setFormData] = useState<BusinessFormData>({ name: '', description: '' });
-    const [submitting, setSubmitting] = useState(false);
-    
+
     // Excel upload states
     const [uploadingFiles, setUploadingFiles] = useState(false);
     const [uploadResults, setUploadResults] = useState<UploadResult[]>([]);
@@ -92,80 +84,6 @@ export default function BusinessDetailPage() {
         } finally {
             setLoadingBusiness(false);
         }
-    };
-
-    const handleEditBusiness = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!formData.name.trim()) return;
-
-        try {
-            setSubmitting(true);
-            const token = localStorage.getItem('access_token');
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/businesses/${businessId}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: formData.name.trim(),
-                    description: formData.description.trim() || null,
-                }),
-            });
-
-            if (response.ok) {
-                setShowEditModal(false);
-                setFormData({ name: '', description: '' });
-                fetchBusiness(); // Refresh the data
-            } else {
-                const errorData = await response.json();
-                setError(errorData.error || 'Failed to update business');
-            }
-        } catch (error) {
-            console.error('Error updating business:', error);
-            setError('Network error while updating business');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleDeleteBusiness = async () => {
-        if (!confirm('Are you sure you want to delete this business? This action cannot be undone.')) {
-            return;
-        }
-
-        try {
-            const token = localStorage.getItem('access_token');
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/businesses/${businessId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (response.ok) {
-                router.push('/businesses'); // Redirect to businesses list
-            } else {
-                const errorData = await response.json();
-                setError(errorData.error || 'Failed to delete business');
-            }
-        } catch (error) {
-            console.error('Error deleting business:', error);
-            setError('Network error while deleting business');
-        }
-    };
-
-    const openEditModal = () => {
-        if (business) {
-            setFormData({ name: business.name, description: business.description || '' });
-            setShowEditModal(true);
-        }
-    };
-
-    const closeModals = () => {
-        setShowEditModal(false);
-        setFormData({ name: '', description: '' });
-        setError(null);
     };
 
     const fetchBusinessData = async () => {
@@ -329,15 +247,15 @@ export default function BusinessDetailPage() {
                     ...selectedSheet,
                     preview: updatedPreview
                 });
-                
+
                 // Update in sheetData as well
-                const updatedSheetData = sheetData.map(sheet => 
-                    sheet.collectionName === selectedSheet.collectionName 
+                const updatedSheetData = sheetData.map(sheet =>
+                    sheet.collectionName === selectedSheet.collectionName
                         ? { ...sheet, preview: updatedPreview }
                         : sheet
                 );
                 setSheetData(updatedSheetData);
-                
+
                 setEditingCell(null);
             } else {
                 const errorData = await response.json();
@@ -404,12 +322,12 @@ export default function BusinessDetailPage() {
                     <div className="flex justify-between h-16">
                         <div className="flex items-center">
                             <button
-                                onClick={() => router.push('/businesses')}
+                                onClick={() => router.push(`/businesses/${businessId}`)}
                                 className="text-indigo-600 hover:text-indigo-900 mr-4"
                             >
-                                ← Back to Businesses
+                                ← Back to Business
                             </button>
-                            <h1 className="text-xl font-semibold text-gray-900">Business Details</h1>
+                            <h1 className="text-xl font-semibold text-gray-900">Business Raw Data</h1>
                         </div>
                         <div className="flex items-center space-x-4">
                             <span className="text-gray-700">Welcome, {user.name || user.email}</span>
@@ -440,30 +358,12 @@ export default function BusinessDetailPage() {
                             <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
                                 <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
                                     <div>
-                                        <h2 className="text-lg font-medium text-gray-900">{business.name}</h2>
+                                        <h2 className="text-lg font-medium text-gray-900">{business.name} - Raw Data</h2>
                                         <p className="mt-1 text-sm text-gray-600">
-                                            {business.description || 'No description provided'}
+                                            Excel-uploaded data collections
                                         </p>
                                     </div>
                                     <div className="flex space-x-3">
-                                        <button
-                                            onClick={openEditModal}
-                                            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                        >
-                                            Edit Business
-                                        </button>
-                                        <button
-                                            onClick={handleDeleteBusiness}
-                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                                        >
-                                            Delete Business
-                                        </button>
-                                        <button
-                                            onClick={() => router.push(`/businesses/${businessId}/raw-data`)}
-                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                        >
-                                            View Raw Data
-                                        </button>
                                         <button
                                             onClick={() => router.push(`/businesses/${businessId}/unified-data`)}
                                             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -703,62 +603,6 @@ export default function BusinessDetailPage() {
                     )}
                 </div>
             </main>
-
-            {/* Edit Business Modal */}
-            {showEditModal && business && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-                    <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                        <div className="mt-3">
-                            <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Business</h3>
-                            <form onSubmit={handleEditBusiness}>
-                                <div className="mb-4">
-                                    <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Business Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="edit-name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        required
-                                        maxLength={100}
-                                    />
-                                </div>
-                                <div className="mb-4">
-                                    <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Description
-                                    </label>
-                                    <textarea
-                                        id="edit-description"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        rows={3}
-                                        maxLength={500}
-                                    />
-                                </div>
-                                <div className="flex justify-end space-x-3">
-                                    <button
-                                        type="button"
-                                        onClick={closeModals}
-                                        className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={submitting}
-                                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                                    >
-                                        {submitting ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

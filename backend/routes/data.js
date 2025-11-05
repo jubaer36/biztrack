@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const XLSX = require('xlsx');
 const Business = require('../models/Business');
 const supabase = require('../config/supabase');
+const { supabaseAdmin } = require('../config/supabase');
 const router = express.Router();
 
 // Configure multer for file uploads
@@ -497,6 +498,287 @@ router.delete('/businesses/:businessId/collections/:collectionName', authenticat
         console.error('Error deleting collection:', error);
         res.status(500).json({
             error: 'Internal server error while deleting collection'
+        });
+    }
+});
+
+// Get all PostgreSQL tables/data for a business
+router.get('/businesses/:businessId/postgres-data', authenticateToken, async (req, res) => {
+    try {
+        const { businessId } = req.params;
+
+        // Check if business exists and belongs to user
+        const ownershipVerified = await Business.verifyOwnership(businessId, req.user.id);
+        if (!ownershipVerified) {
+            return res.status(403).json({
+                error: 'Access denied'
+            });
+        }
+
+        // Define the tables we want to fetch data from
+        const tables = [
+            'product_category',
+            'product_brand', 
+            'supplier',
+            'customer',
+            'investor',
+            'investment',
+            'investors_capital',
+            'product',
+            'purchase_order',
+            'purchase_order_items',
+            'sales_order',
+            'sales_order_items'
+        ];
+
+        const results = [];
+
+        for (const tableName of tables) {
+            try {
+                // Fetch data from Supabase PostgreSQL
+                const { data, error } = await supabaseAdmin
+                    .from(tableName)
+                    .select('*')
+                    .eq('business_id', businessId)
+                    .limit(100); // Limit to 100 rows for preview
+
+                if (error) {
+                    console.error(`Error fetching from ${tableName}:`, error);
+                    continue; // Skip this table if there's an error
+                }
+
+                if (data && data.length > 0) {
+                    // Get column names from the first row
+                    const columns = data.length > 0 ? Object.keys(data[0]) : [];
+                    
+                    results.push({
+                        table_name: tableName,
+                        record_count: data.length,
+                        columns: columns,
+                        sample_data: data.slice(0, 10) // Return first 10 rows as sample
+                    });
+                }
+            } catch (tableError) {
+                console.error(`Error processing table ${tableName}:`, tableError);
+                // Continue with other tables
+            }
+        }
+
+        res.json({
+            businessId,
+            tables: results
+        });
+
+    } catch (error) {
+        console.error('Error fetching PostgreSQL business data:', error);
+        res.status(500).json({
+            error: 'Internal server error while fetching PostgreSQL business data'
+        });
+    }
+});
+
+// Get all data from a specific PostgreSQL table
+router.get('/businesses/:businessId/postgres-tables/:tableName', authenticateToken, async (req, res) => {
+    try {
+        const { businessId, tableName } = req.params;
+        const { page = 1, limit = 50 } = req.query;
+
+        // Check if business exists and belongs to user
+        const ownershipVerified = await Business.verifyOwnership(businessId, req.user.id);
+        if (!ownershipVerified) {
+            return res.status(403).json({
+                error: 'Access denied'
+            });
+        }
+
+        // Validate table name is allowed
+        const allowedTables = [
+            'product_category', 'product_brand', 'supplier', 'customer', 'investor',
+            'investment', 'investors_capital', 'product', 'purchase_order', 
+            'purchase_order_items', 'sales_order', 'sales_order_items'
+        ];
+
+        if (!allowedTables.includes(tableName)) {
+            return res.status(400).json({
+                error: 'Invalid table name'
+            });
+        }
+
+        const from = (parseInt(page) - 1) * parseInt(limit);
+        const to = from + parseInt(limit) - 1;
+
+        // Fetch data from Supabase PostgreSQL with pagination
+        const { data, error, count } = await supabaseAdmin
+            .from(tableName)
+            .select('*', { count: 'exact' })
+            .eq('business_id', businessId)
+            .range(from, to);
+
+        if (error) {
+            return res.status(500).json({
+                error: `Error fetching from table ${tableName}: ${error.message}`
+            });
+        }
+
+        res.json({
+            tableName,
+            documents: data || [],
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                totalDocuments: count || 0,
+                totalPages: Math.ceil((count || 0) / parseInt(limit))
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching PostgreSQL table data:', error);
+        res.status(500).json({
+            error: 'Internal server error while fetching PostgreSQL table data'
+        });
+    }
+});
+
+// Update a record in a PostgreSQL table
+router.put('/businesses/:businessId/postgres-tables/:tableName/records/:recordId', authenticateToken, async (req, res) => {
+    try {
+        const { businessId, tableName, recordId } = req.params;
+        const updateData = req.body;
+
+        // Check if business exists and belongs to user
+        const ownershipVerified = await Business.verifyOwnership(businessId, req.user.id);
+        if (!ownershipVerified) {
+            return res.status(403).json({
+                error: 'Access denied'
+            });
+        }
+
+        // Validate table name is allowed
+        const allowedTables = [
+            'product_category', 'product_brand', 'supplier', 'customer', 'investor',
+            'investment', 'investors_capital', 'product', 'purchase_order', 
+            'purchase_order_items', 'sales_order', 'sales_order_items'
+        ];
+
+        if (!allowedTables.includes(tableName)) {
+            return res.status(400).json({
+                error: 'Invalid table name'
+            });
+        }
+
+        // Remove business_id from updateData if present (shouldn't be updated)
+        delete updateData.business_id;
+
+        // Determine primary key column based on table
+        let primaryKeyColumn = 'id'; // Default
+        if (tableName === 'product') {
+            primaryKeyColumn = 'product_id';
+        } else if (tableName === 'purchase_order_items' || tableName === 'sales_order_items') {
+            // Composite primary key - need special handling
+            return res.status(400).json({
+                error: 'Composite primary key tables not supported for updates yet'
+            });
+        } else {
+            // Most tables use auto-incrementing IDs
+            primaryKeyColumn = tableName.replace('_', '') + '_id';
+        }
+
+        // Update record in Supabase PostgreSQL
+        const { data, error } = await supabaseAdmin
+            .from(tableName)
+            .update(updateData)
+            .eq(primaryKeyColumn, recordId)
+            .eq('business_id', businessId) // Extra security check
+            .select();
+
+        if (error) {
+            return res.status(500).json({
+                error: `Error updating record in ${tableName}: ${error.message}`
+            });
+        }
+
+        if (!data || data.length === 0) {
+            return res.status(404).json({
+                error: 'Record not found or no changes made'
+            });
+        }
+
+        res.json({
+            message: 'Record updated successfully',
+            updatedRecord: data[0]
+        });
+
+    } catch (error) {
+        console.error('Error updating PostgreSQL record:', error);
+        res.status(500).json({
+            error: 'Internal server error while updating PostgreSQL record'
+        });
+    }
+});
+
+// Delete a record from a PostgreSQL table
+router.delete('/businesses/:businessId/postgres-tables/:tableName/records/:recordId', authenticateToken, async (req, res) => {
+    try {
+        const { businessId, tableName, recordId } = req.params;
+
+        // Check if business exists and belongs to user
+        const ownershipVerified = await Business.verifyOwnership(businessId, req.user.id);
+        if (!ownershipVerified) {
+            return res.status(403).json({
+                error: 'Access denied'
+            });
+        }
+
+        // Validate table name is allowed
+        const allowedTables = [
+            'product_category', 'product_brand', 'supplier', 'customer', 'investor',
+            'investment', 'investors_capital', 'product', 'purchase_order', 
+            'purchase_order_items', 'sales_order', 'sales_order_items'
+        ];
+
+        if (!allowedTables.includes(tableName)) {
+            return res.status(400).json({
+                error: 'Invalid table name'
+            });
+        }
+
+        // Determine primary key column based on table
+        let primaryKeyColumn = 'id'; // Default
+        if (tableName === 'product') {
+            primaryKeyColumn = 'product_id';
+        } else if (tableName === 'purchase_order_items' || tableName === 'sales_order_items') {
+            // Composite primary key - need special handling
+            return res.status(400).json({
+                error: 'Composite primary key tables not supported for deletion yet'
+            });
+        } else {
+            // Most tables use auto-incrementing IDs
+            primaryKeyColumn = tableName.replace('_', '') + '_id';
+        }
+
+        // Delete record from Supabase PostgreSQL
+        const { data, error } = await supabaseAdmin
+            .from(tableName)
+            .delete()
+            .eq(primaryKeyColumn, recordId)
+            .eq('business_id', businessId) // Extra security check
+            .select();
+
+        if (error) {
+            return res.status(500).json({
+                error: `Error deleting record from ${tableName}: ${error.message}`
+            });
+        }
+
+        res.json({
+            message: 'Record deleted successfully',
+            deletedRecord: data[0] || null
+        });
+
+    } catch (error) {
+        console.error('Error deleting PostgreSQL record:', error);
+        res.status(500).json({
+            error: 'Internal server error while deleting PostgreSQL record'
         });
     }
 });
