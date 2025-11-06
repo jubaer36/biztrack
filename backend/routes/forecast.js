@@ -43,6 +43,103 @@ const groq = axios.create({
     }
 });
 
+// GET /api/forecast/context/:businessId?window=7|15|30&lat=...&lon=...
+// Returns standardized holidays (Bangladesh) and weather arrays for next N days
+router.get('/context/:businessId', authenticateUser, async (req, res) => {
+    const { businessId } = req.params;
+    const userId = req.user.id;
+    const windowParam = (req.query.window || '7').toString();
+    const lat = req.query.lat ? Number(req.query.lat) : 23.8103; // Dhaka default
+    const lon = req.query.lon ? Number(req.query.lon) : 90.4125;
+
+    if (!['7', '15', '30'].includes(windowParam)) {
+        return res.status(400).json({ error: "Invalid window. Use '7', '15', or '30'" });
+    }
+
+    try {
+        // Verify business ownership
+        const { data: business, error: businessError } = await supabaseAdmin
+            .from('businesses')
+            .select('id, name, user_id')
+            .eq('id', businessId)
+            .eq('user_id', userId)
+            .single();
+
+        if (businessError || !business) {
+            return res.status(403).json({ error: 'Access denied or business not found' });
+        }
+
+        const days = Number(windowParam);
+        const now = new Date();
+        const end = new Date();
+        end.setDate(end.getDate() - 1 + days); // inclusive window
+
+        // Holidays: Holiday API public holidays for Bangladesh (BD)
+        // Fetch for current and next year, then filter upcoming dates within window
+        const year = now.getFullYear();
+        const holidayApiKey = process.env.HOLIDAY_API_KEY || '5cfbae4b-8364-4be9-a1e0-7c75e9b03c1f';
+        const urls = [
+            `https://holidayapi.com/v1/holidays?key=${holidayApiKey}&country=BD&year=${year}&public=true`,
+            `https://holidayapi.com/v1/holidays?key=${holidayApiKey}&country=BD&year=${year + 1}&public=true`
+        ];
+
+        let holidayData = [];
+        try {
+            const [resp1, resp2] = await Promise.all([
+                axios.get(urls[0]),
+                axios.get(urls[1])
+            ]);
+            const extract = (resp) => {
+                const h = resp?.data?.holidays;
+                if (Array.isArray(h)) return h;
+                if (h && typeof h === 'object') {
+                    // Some responses may be an object keyed by date
+                    return Object.values(h).flat();
+                }
+                return [];
+            };
+            holidayData = [...extract(resp1), ...extract(resp2)];
+        } catch (e) {
+            // Non-fatal: return empty if service fails
+            holidayData = [];
+        }
+
+        const holidays = holidayData
+            .map(h => ({ date: h.date, name: h.name || h.localName || 'Holiday', countryCode: 'BD' }))
+            .filter(h => {
+                const d = new Date(h.date + 'T00:00:00Z');
+                return d >= new Date(now.toDateString()) && d <= end;
+            })
+            .slice(0, 100);
+
+        // Weather: Open-Meteo 7/15/30 day forecast for given coordinates (no API key)
+        // We'll request daily summary: temperature and precipitation probability
+        const startDate = now.toISOString().slice(0, 10);
+        const endDate = end.toISOString().slice(0, 10);
+        let weather = [];
+        try {
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_mean&timezone=auto&start_date=${startDate}&end_date=${endDate}`;
+            const w = await axios.get(weatherUrl);
+            const d = w.data?.daily;
+            if (d && d.time) {
+                weather = d.time.map((date, idx) => ({
+                    date,
+                    summary: `Tmax ${d.temperature_2m_max?.[idx]}°C, Tmin ${d.temperature_2m_min?.[idx]}°C`,
+                    temp: d.temperature_2m_max?.[idx],
+                    precipChance: d.precipitation_probability_mean?.[idx]
+                }));
+            }
+        } catch (e) {
+            weather = [];
+        }
+
+        return res.json({ success: true, window: windowParam, holidays, weather, location: { lat, lon } });
+    } catch (e) {
+        console.error('[FORECAST CONTEXT] Error:', e);
+        return res.status(500).json({ error: 'Failed to fetch forecasting context', details: String(e?.message || e) });
+    }
+});
+
 // GET /api/forecast/generate/:businessId
 router.get('/generate/:businessId', authenticateUser, async (req, res) => {
     const businessId = req.params.businessId;

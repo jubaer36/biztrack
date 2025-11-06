@@ -145,16 +145,23 @@ export default function ForecastPage() {
 			setAiError(null);
 			setAiInsights(null);
 			const token = localStorage.getItem("access_token");
-			// Placeholder: we can extend later to allow user-provided holidays/weather
-			const body = {
-				window: topWindow === 'all' ? '30' : topWindow, // AI requires 7/15/30
-				holidays: [],
-				weather: []
-			};
+			const windowParam = topWindow === 'all' ? '30' : topWindow;
+
+			// 1) Fetch legit holidays and weather for Bangladesh (and optional coords later)
+			const ctxResp = await fetch(`${API_BASE}/forecast/context/${selectedBusiness}?window=${windowParam}`, {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			if (!ctxResp.ok) {
+				const e = await ctxResp.json().catch(() => ({}));
+				throw new Error(e.error || 'Failed to load forecasting context');
+			}
+			const ctx = await ctxResp.json();
+
+			// 2) Call AI endpoint with fetched holidays and weather
 			const resp = await fetch(`${API_BASE}/forecast/ai/${selectedBusiness}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-				body: JSON.stringify(body)
+				body: JSON.stringify({ window: windowParam, holidays: ctx.holidays || [], weather: ctx.weather || [] })
 			});
 			if (!resp.ok) {
 				const e = await resp.json().catch(() => ({}));
@@ -294,7 +301,7 @@ export default function ForecastPage() {
 							>
 								{aiLoading ? 'Generating…' : `Generate AI for ${topWindow === 'all' ? '30' : topWindow} days`}
 							</button>
-							<span className="text-xs text-muted-foreground">Uses products, recent trends, holidays, and weather</span>
+							<span className="text-xs text-muted-foreground">Uses BD public holidays and local weather</span>
 						</div>
 
 						{aiError && (
