@@ -36,7 +36,7 @@ interface AiInsightsPayload {
 interface ContextHoliday { date: string; name: string }
 interface ContextWeather { date: string; weather: string }
 
-type WindowKey = '7' | '15' | '30' | 'all';
+type WindowKey = '7' | '15' | '30' | 'all' | 'last_year';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -127,15 +127,35 @@ export default function ForecastPage() {
 				setTopLoading(true);
 				setTopError(null);
 				const token = localStorage.getItem("access_token");
-				const resp = await fetch(`${API_BASE}/analytics/top-products/${selectedBusiness}?window=${topWindow}`, {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-				if (!resp.ok) {
-					const e = await resp.json().catch(() => ({}));
-					throw new Error(e.error || "Failed to load trending products");
+
+				// Use historical endpoint for "Last Year" option
+				if (topWindow === 'last_year') {
+					const resp = await fetch(`${API_BASE}/forecast/historical/${selectedBusiness}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					});
+					if (!resp.ok) {
+						const e = await resp.json().catch(() => ({}));
+						throw new Error(e.error || "Failed to load historical data");
+					}
+					const data = await resp.json();
+					// Convert historical trending format to match top products format
+					const historicalProducts = (data.historicalTrending || []).map((item: any) => ({
+						product_id: item.product_id,
+						product_name: item.product_name,
+						units_sold: item.units_sold_last_year || 0
+					}));
+					setTopProducts(historicalProducts);
+				} else {
+					const resp = await fetch(`${API_BASE}/analytics/top-products/${selectedBusiness}?window=${topWindow}`, {
+						headers: { Authorization: `Bearer ${token}` },
+					});
+					if (!resp.ok) {
+						const e = await resp.json().catch(() => ({}));
+						throw new Error(e.error || "Failed to load trending products");
+					}
+					const data = await resp.json();
+					setTopProducts(data.products || []);
 				}
-				const data = await resp.json();
-				setTopProducts(data.products || []);
 			} catch (e: any) {
 				setTopError(e.message || "Failed to load trending products");
 			} finally {
@@ -164,10 +184,25 @@ export default function ForecastPage() {
 				weather = ctx.weather || weather;
 			}
 
+			// Fetch historical trending data for AI context
+			let historicalTrending = [];
+			try {
+				const histResp = await fetch(`${API_BASE}/forecast/historical/${selectedBusiness}`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				if (histResp.ok) {
+					const histData = await histResp.json();
+					historicalTrending = histData.historicalTrending || [];
+				}
+			} catch (e) {
+				console.warn('Failed to fetch historical data for AI:', e);
+				// Continue without historical data
+			}
+
 			const resp = await fetch(`${API_BASE}/forecast/ai/${selectedBusiness}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ window: '15', holidays, weather })
+				body: JSON.stringify({ window: '15', holidays, weather, historicalTrending })
 			});
 			if (!resp.ok) {
 				const e = await resp.json().catch(() => ({}));
@@ -248,7 +283,7 @@ export default function ForecastPage() {
 										</tr>
 									</thead>
 									<tbody>
-										{(ctxWeather || []).slice(0,7).map((w) => (
+										{(ctxWeather || []).slice(0, 7).map((w) => (
 											<tr key={w.date} className="border-t border-border">
 												<td className="p-3">{w.date}</td>
 												<td className="p-3">{w.weather}</td>
@@ -268,17 +303,17 @@ export default function ForecastPage() {
 				<Card>
 					<CardHeader>
 						<CardTitle>Trending Products</CardTitle>
-						<CardDescription>Top sellers by units in 7 / 15 / 30 days or All time</CardDescription>
+						<CardDescription>Top sellers by units in 7 / 15 / 30 days, All time, or Last Year</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<div className="flex gap-2 mb-4">
-							{(['7','15','30','all'] as WindowKey[]).map(w => (
+						<div className="flex gap-2 mb-4 flex-wrap">
+							{(['7', '15', '30', 'all', 'last_year'] as WindowKey[]).map(w => (
 								<button
 									key={w}
 									onClick={() => setTopWindow(w)}
-									className={`px-3 py-1.5 rounded-md border ${topWindow===w ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-foreground'}`}
+									className={`px-3 py-1.5 rounded-md border ${topWindow === w ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-foreground'}`}
 								>
-									{w === 'all' ? 'All time' : `${w} days`}
+									{w === 'all' ? 'All time' : w === 'last_year' ? 'Last Year' : `${w} days`}
 								</button>
 							))}
 						</div>
@@ -293,7 +328,9 @@ export default function ForecastPage() {
 									<tr>
 										<th className="text-left p-3 font-medium">#</th>
 										<th className="text-left p-3 font-medium">Product</th>
-										<th className="text-right p-3 font-medium">Units sold</th>
+										<th className="text-right p-3 font-medium">
+											{topWindow === 'last_year' ? 'Units sold (Last Year)' : 'Units sold'}
+										</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -309,7 +346,9 @@ export default function ForecastPage() {
 									))}
 									{!topLoading && (!topProducts || topProducts.length === 0) && (
 										<tr>
-											<td className="p-3 text-muted-foreground" colSpan={3}>No sales yet for this window.</td>
+											<td className="p-3 text-muted-foreground" colSpan={3}>
+												{topWindow === 'last_year' ? 'No sales data from last year for this period.' : 'No sales yet for this window.'}
+											</td>
 										</tr>
 									)}
 								</tbody>
@@ -360,7 +399,7 @@ export default function ForecastPage() {
 														<div className="text-xs text-muted-foreground">{it.product_id}</div>
 													</td>
 													<td className="p-3">
-														<span className={`px-2 py-0.5 rounded text-xs ${it.demand_level==='high' ? 'bg-green-100 text-green-700' : it.demand_level==='medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{it.demand_level}</span>
+														<span className={`px-2 py-0.5 rounded text-xs ${it.demand_level === 'high' ? 'bg-green-100 text-green-700' : it.demand_level === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{it.demand_level}</span>
 													</td>
 													<td className="p-3">
 														{it.anomaly ? <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">Yes</span> : <span className="text-xs text-muted-foreground">No</span>}

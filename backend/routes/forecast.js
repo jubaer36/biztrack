@@ -435,13 +435,161 @@ router.get('/generate/:businessId', authenticateUser, async (req, res) => {
     }
 });
 
+// GET /api/forecast/historical/:businessId
+// Returns last year's trending products for the same date range (+/- 7 days)
+// Includes current inventory levels for comparison
+router.get('/historical/:businessId', authenticateUser, async (req, res) => {
+    const businessId = req.params.businessId;
+    const userId = req.user.id;
+
+    try {
+        // Verify business ownership
+        const { data: business, error: businessError } = await supabaseAdmin
+            .from('businesses')
+            .select('id, name, user_id')
+            .eq('id', businessId)
+            .eq('user_id', userId)
+            .single();
+
+        if (businessError || !business) {
+            return res.status(403).json({ error: 'Access denied or business not found' });
+        }
+
+        const now = new Date();
+
+        // Calculate last year's date range: same date +/- 7 days
+        const lastYearCenter = new Date(now);
+        lastYearCenter.setFullYear(lastYearCenter.getFullYear() - 1);
+
+        const lastYearStart = new Date(lastYearCenter);
+        lastYearStart.setDate(lastYearStart.getDate() - 7);
+
+        const lastYearEnd = new Date(lastYearCenter);
+        lastYearEnd.setDate(lastYearEnd.getDate() + 7);
+
+        console.log(`[HISTORICAL] Fetching data from ${lastYearStart.toISOString().split('T')[0]} to ${lastYearEnd.toISOString().split('T')[0]}`);
+
+        // Fetch last year's orders in the date range
+        const { data: orders, error: ordersError } = await supabaseAdmin
+            .from('sales_order')
+            .select('sales_order_id, order_date')
+            .eq('business_id', businessId)
+            .gte('order_date', lastYearStart.toISOString())
+            .lte('order_date', lastYearEnd.toISOString());
+
+        if (ordersError) {
+            return res.status(500).json({ error: 'Failed to load sales orders', details: ordersError });
+        }
+
+        if (!orders || orders.length === 0) {
+            return res.json({
+                success: true,
+                business: { id: business.id, name: business.name },
+                dateRange: {
+                    start: lastYearStart.toISOString().split('T')[0],
+                    end: lastYearEnd.toISOString().split('T')[0],
+                    centerDate: lastYearCenter.toISOString().split('T')[0]
+                },
+                historicalTrending: [],
+                message: 'No historical data found for this period'
+            });
+        }
+
+        // Fetch order items for these orders
+        const orderIds = orders.map(o => o.sales_order_id);
+        const { data: items, error: itemsError } = await supabaseAdmin
+            .from('sales_order_items')
+            .select('sales_order_id, product_id, line_total')
+            .eq('business_id', businessId)
+            .in('sales_order_id', orderIds);
+
+        if (itemsError || !items || items.length === 0) {
+            return res.json({
+                success: true,
+                business: { id: business.id, name: business.name },
+                dateRange: {
+                    start: lastYearStart.toISOString().split('T')[0],
+                    end: lastYearEnd.toISOString().split('T')[0],
+                    centerDate: lastYearCenter.toISOString().split('T')[0]
+                },
+                historicalTrending: [],
+                message: 'No order items found'
+            });
+        }
+
+        // Get product info (no stock tracking in current schema)
+        const productIds = Array.from(new Set(items.map(it => it.product_id).filter(Boolean)));
+        const { data: products, error: productsError } = await supabaseAdmin
+            .from('product')
+            .select('product_id, product_name, selling_price')
+            .eq('business_id', businessId)
+            .in('product_id', productIds);
+
+        const productInfo = new Map(
+            (products || []).map(p => [
+                p.product_id,
+                {
+                    name: p.product_name,
+                    price: Number(p.selling_price) || 0
+                }
+            ])
+        );
+
+        // Calculate units sold per product
+        const unitsByProduct = new Map();
+        for (const it of items) {
+            const pInfo = productInfo.get(it.product_id);
+            if (!pInfo) continue;
+
+            const price = pInfo.price;
+            const lineTotal = Number(it.line_total) || 0;
+
+            // Estimate units from line_total / price (since no quantity column exists)
+            const units = price > 0 ? Math.round(lineTotal / price) : 1;
+
+            unitsByProduct.set(it.product_id, (unitsByProduct.get(it.product_id) || 0) + units);
+        }
+
+        // Build trending list (no stock info available in current schema)
+        const historicalTrending = Array.from(unitsByProduct.entries())
+            .map(([pid, units]) => {
+                const pInfo = productInfo.get(pid) || {};
+                return {
+                    product_id: pid,
+                    product_name: pInfo.name || pid,
+                    units_sold_last_year: Math.round(units),
+                    selling_price: pInfo.price || 0
+                };
+            })
+            .sort((a, b) => b.units_sold_last_year - a.units_sold_last_year);
+
+        return res.json({
+            success: true,
+            business: { id: business.id, name: business.name },
+            dateRange: {
+                start: lastYearStart.toISOString().split('T')[0],
+                end: lastYearEnd.toISOString().split('T')[0],
+                centerDate: lastYearCenter.toISOString().split('T')[0]
+            },
+            historicalTrending
+        });
+    } catch (e) {
+        console.error('[HISTORICAL] Error:', e);
+        return res.status(500).json({ error: 'Historical data fetch failed', details: String(e?.message || e) });
+    }
+});
+
 // POST /api/forecast/ai/:businessId
-// body: { holidays?: Array<{date:string,name:string,impact?:string}>, weather?: Array<{date:string,summary:string,temp?:number,precipChance?:number}> }
+// body: { 
+//   holidays?: Array<{date:string,name:string,impact?:string}>, 
+//   weather?: Array<{date:string,summary:string,temp?:number,precipChance?:number}>,
+//   historicalTrending?: Array<{product_id:string,product_name:string,units_sold_last_year:number,current_stock:number}>
+// }
 // Fixed to 7 days forecast due to free weather API limitation
 router.post('/ai/:businessId', authenticateUser, async (req, res) => {
     const { businessId } = req.params;
     const userId = req.user.id;
-    const { holidays = [], weather = [] } = req.body || {};
+    const { holidays = [], weather = [], historicalTrending = [] } = req.body || {};
     const window = '7'; // Fixed to 7 days for free weather API
 
     try {
@@ -532,26 +680,33 @@ router.post('/ai/:businessId', authenticateUser, async (req, res) => {
             .slice(0, 10);
 
         const weatherList = (weather || []).slice(0, 7); // Only 7 days from free weather API
+        const historicalList = (historicalTrending || []).slice(0, 30); // Top 30 historical items
 
         // Log filtering for debugging
         console.log(`[FORECAST AI] Received ${(holidays || []).length} holidays, filtered to ${holidaysIn7Days.length} within 7 days`);
+        console.log(`[FORECAST AI] Historical data: ${historicalList.length} products from last year`);
         console.log(`[FORECAST AI] Date range: ${todayStart.toISOString().split('T')[0]} to ${sevenDaysLater.toISOString().split('T')[0]}`);
         if (holidaysIn7Days.length > 0) {
             console.log(`[FORECAST AI] Holidays in prompt:`, holidaysIn7Days.map(h => `${h.name} (${h.date})`).join(', '));
         }
 
-        const prompt = `You are a retail demand intelligence AI.
-Given the list of products for a specific business, recent trending sellers over the last 7 days, and upcoming holidays and weather, predict which products are likely to be in HIGH demand in the next 7 days. Identify potential anomalies where expected demand deviates from recent trends due to holidays or weather.
+        const prompt = `You are a retail demand intelligence AI with historical pattern recognition.
+Given the list of products, current trending sellers (last 7 days), historical sales data from the same period last year, upcoming holidays and weather, predict which products are likely to be in HIGH demand in the next 7 days.
+
+Historical Context: Last year's data shows what sold well during this same time period. Use this to identify seasonal patterns and repeating trends.
 
 Constraints:
 - Prefer concise, actionable heads-up.
-- Consider seasonality signals from holidays and weather (e.g., heat, rain).
+- Consider seasonality signals from holidays, weather, and historical patterns.
+- If a product sold well last year during this period AND is trending now, flag as HIGH priority for repeat demand.
 - Use only the provided product list; do not invent products.
 - Focus on 7-day forecast window.
+- Limit output to top 10 most relevant products.
 
 Input:
 - Products: ${JSON.stringify(productList)}
-- Trending (last 7 days): ${JSON.stringify(trending)}
+- Current Trending (last 7 days): ${JSON.stringify(trending)}
+- Historical Trending (same period last year, ±7 days) [{ product_id, product_name, units_sold_last_year, selling_price }]: ${JSON.stringify(historicalList)}
 - Upcoming Holidays (next 7 days) [{ date, name }]: ${JSON.stringify(holidaysIn7Days)}
 - Weather Forecast (next 7 days) [{ date, weather }]: ${JSON.stringify(weatherList)}
 
@@ -563,11 +718,11 @@ Output (STRICT JSON only):
       "product_name": "string",
       "demand_level": "high|medium|low",
       "anomaly": true,
-      "rationale": "string (<=200 chars)"
+      "rationale": "string (<=200 chars, mention if based on historical pattern or year-over-year trend)"
     }
   ],
   "window": "7",
-  "notes": ["string"]
+  "notes": ["string (insights about historical patterns, seasonal trends, or notable observations)"]
 }`;
 
         // Print prompt for inspection (truncated for readability)
