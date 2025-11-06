@@ -42,7 +42,7 @@ class DataMapper {
             details: {},
             logs: []
         };
-        
+
         // Callback for sending progress updates to frontend
         this.progressCallback = null;
         // Initialize Groq client with primary model
@@ -60,7 +60,7 @@ class DataMapper {
             'mixtral-8x7b-32768',         // Fallback 2 - good for complex reasoning
             'gemma2-9b-it'                // Fallback 3 - lightweight option
         ];
-        
+
         this.currentModelIndex = 0;
         this.maxRetries = 2;
 
@@ -88,7 +88,7 @@ class DataMapper {
             'payment', 'cash', 'money', 'sale', 'purchase', 'investment', 'capital',
             'balance', 'debit', 'credit', 'transaction', 'billing', 'invoice'
         ];
-        
+
         // Enhanced field pattern recognition for common business data formats
         this.fieldPatterns = {
             // Inventory/Product patterns
@@ -142,9 +142,20 @@ class DataMapper {
                 phone: ['phone', 'telephone', 'mobile', 'contact'],
                 address: ['address', 'location', 'billing address', 'shipping address'],
                 type: ['customer type', 'type', 'category']
+            },
+            // Investor patterns
+            investor: {
+                name: ['investor', 'investor name', 'investor_name', 'partner', 'stakeholder'],
+                contact: ['contact', 'contact person', 'contact_person', 'phone', 'email'],
+                email: ['email', 'e-mail', 'investor email'],
+                phone: ['phone', 'telephone', 'mobile', 'contact'],
+                address: ['address', 'location', 'office address'],
+                investment_date: ['initial investment date', 'investment date', 'start date', 'date invested'],
+                terms: ['investment terms', 'terms', 'agreement', 'contract'],
+                status: ['status', 'active', 'state', 'current status']
             }
         };
-        
+
         // Table detection rules based on field combinations
         this.tableDetectionRules = [
             {
@@ -181,6 +192,13 @@ class DataMapper {
                 requiredFields: ['name'],
                 optionalFields: ['email', 'phone', 'address'],
                 keywords: ['customer', 'client', 'buyer']
+            },
+            {
+                table: 'investor',
+                priority: 7,
+                requiredFields: ['name'],
+                optionalFields: ['email', 'phone', 'address', 'investment_date', 'terms'],
+                keywords: ['investor', 'partner', 'stakeholder', 'investment', 'capital']
             }
         ];
     }
@@ -208,7 +226,7 @@ class DataMapper {
 
         const prefix = emoji[level] || '•';
         console.log(`${prefix} [${level.toUpperCase()}] ${message}`);
-        
+
         if (Object.keys(details).length > 0) {
             console.log('   Details:', JSON.stringify(details, null, 2));
         }
@@ -254,7 +272,7 @@ class DataMapper {
      */
     async analyzeCollectionStructure(businessId, collectionName) {
         this.log('info', `Starting analysis of collection: ${collectionName}`);
-        
+
         try {
             const db = mongoose.connection.db;
             const collection = db.collection(collectionName);
@@ -280,7 +298,7 @@ class DataMapper {
             const fieldAnalysis = this.extractFieldInfo(sampleDocs);
 
             const cashFlowFields = fieldAnalysis.filter(f => f.isCashFlowRelated).length;
-            
+
             this.log('success', 'Field analysis complete', {
                 totalFields: fieldAnalysis.length,
                 cashFlowRelatedFields: cashFlowFields,
@@ -329,7 +347,7 @@ class DataMapper {
                 if (!fieldMap.has(key)) {
                     const normalizedFieldName = this.normalizeFieldName(key);
                     const fieldCategory = this.categorizeField(key);
-                    
+
                     fieldMap.set(key, {
                         fieldName: key,
                         normalizedName: normalizedFieldName,
@@ -349,7 +367,7 @@ class DataMapper {
 
         return Array.from(fieldMap.values());
     }
-    
+
     /**
      * Normalize field names for better matching (handle spaces, cases, etc.)
      */
@@ -360,27 +378,27 @@ class DataMapper {
             .replace(/\s+/g, '_')
             .replace(/[^a-z0-9_]/g, '');
     }
-    
+
     /**
      * Categorize field based on pattern matching
      */
     categorizeField(fieldName) {
         const normalized = this.normalizeFieldName(fieldName);
-        
+
         // Check each pattern category
         for (const [category, patterns] of Object.entries(this.fieldPatterns)) {
             for (const [fieldType, variants] of Object.entries(patterns)) {
                 for (const variant of variants) {
                     const normalizedVariant = this.normalizeFieldName(variant);
-                    if (normalized === normalizedVariant || 
-                        normalized.includes(normalizedVariant) || 
+                    if (normalized === normalizedVariant ||
+                        normalized.includes(normalizedVariant) ||
                         normalizedVariant.includes(normalized)) {
                         return { category, fieldType, matchedPattern: variant };
                     }
                 }
             }
         }
-        
+
         return { category: 'unknown', fieldType: 'unknown', matchedPattern: null };
     }
 
@@ -449,19 +467,19 @@ class DataMapper {
      */
     async determineTableMapping(collectionAnalysis) {
         this.log('info', 'Starting LLM table mapping analysis');
-        
+
         const prompt = this.createMappingPrompt(collectionAnalysis);
-        
+
         for (let attempt = 0; attempt < this.maxRetries; attempt++) {
             try {
                 const currentModel = this.fallbackModels[this.currentModelIndex];
-                
+
                 this.log('progress', `Querying LLM for table mapping`, {
                     model: currentModel,
                     attempt: attempt + 1,
                     maxRetries: this.maxRetries
                 });
-                
+
                 // Update client with current model
                 this.groqClient = new ChatGroq({
                     apiKey: process.env.GROQ_API_KEY,
@@ -486,7 +504,7 @@ class DataMapper {
                 this.log('progress', 'Parsing LLM response...');
 
                 const mappingResult = this.parseLLMResponse(response.content);
-                
+
                 this.log('success', 'Table mapping determined successfully', {
                     model: currentModel,
                     responseTime: `${responseTime}ms`,
@@ -507,25 +525,25 @@ class DataMapper {
                     attempt: attempt + 1,
                     error: error.message
                 });
-                
+
                 // Try next model on last attempt
                 if (attempt === this.maxRetries - 1) {
                     this.currentModelIndex = (this.currentModelIndex + 1) % this.fallbackModels.length;
-                    
+
                     // If we've tried all models, use fallback
                     if (this.currentModelIndex === 0) {
                         this.log('warning', 'All LLM models failed, switching to rule-based mapping');
                         return this.fallbackRuleBasedMapping(collectionAnalysis);
                     }
                 }
-                
+
                 // Wait before retry
                 const waitTime = 1000 * (attempt + 1);
                 this.log('info', `Waiting ${waitTime}ms before retry...`);
                 await this.sleep(waitTime);
             }
         }
-        
+
         // Final fallback
         this.log('warning', 'Using rule-based fallback mapping');
         return this.fallbackRuleBasedMapping(collectionAnalysis);
@@ -543,14 +561,14 @@ class DataMapper {
      */
     fallbackRuleBasedMapping(collectionAnalysis) {
         const { fields, collectionName } = collectionAnalysis;
-        
+
         this.log('info', 'Applying enhanced rule-based mapping fallback');
-        
+
         // Score each table based on field matches
         const tableScores = this.tableDetectionRules.map(rule => {
             let score = 0;
             let matchedFields = [];
-            
+
             // Check required fields
             for (const requiredField of rule.requiredFields) {
                 const match = fields.find(f => {
@@ -558,7 +576,7 @@ class DataMapper {
                     const normalized = f.normalizedName || this.normalizeFieldName(f.fieldName);
                     return category === requiredField || normalized.includes(requiredField);
                 });
-                
+
                 if (match) {
                     score += 10;
                     matchedFields.push(match.fieldName);
@@ -566,7 +584,7 @@ class DataMapper {
                     score -= 5; // Penalty for missing required field
                 }
             }
-            
+
             // Check optional fields
             for (const optionalField of rule.optionalFields) {
                 const match = fields.find(f => {
@@ -574,13 +592,13 @@ class DataMapper {
                     const normalized = f.normalizedName || this.normalizeFieldName(f.fieldName);
                     return category === optionalField || normalized.includes(optionalField);
                 });
-                
+
                 if (match) {
                     score += 3;
                     matchedFields.push(match.fieldName);
                 }
             }
-            
+
             // Check collection name for keywords
             const lowerCollectionName = collectionName.toLowerCase();
             for (const keyword of rule.keywords) {
@@ -588,7 +606,7 @@ class DataMapper {
                     score += 5;
                 }
             }
-            
+
             // Check field names for keywords
             const fieldNamesLower = fields.map(f => f.fieldName.toLowerCase()).join(' ');
             for (const keyword of rule.keywords) {
@@ -596,7 +614,7 @@ class DataMapper {
                     score += 2;
                 }
             }
-            
+
             return {
                 table: rule.table,
                 score: score,
@@ -604,31 +622,31 @@ class DataMapper {
                 matchedFields: matchedFields
             };
         });
-        
+
         // Sort by score and priority
         tableScores.sort((a, b) => {
             if (a.score === b.score) return b.priority - a.priority;
             return b.score - a.score;
         });
-        
+
         const bestMatch = tableScores[0];
         const detectedTable = bestMatch.score > 0 ? bestMatch.table : 'product';
         const confidence = Math.min(0.95, Math.max(0.4, bestMatch.score / 30));
-        
+
         this.log('info', `Rule-based detection selected: ${detectedTable}`, {
             confidence: confidence.toFixed(2),
             score: bestMatch.score,
             matchedFields: bestMatch.matchedFields.length,
             topScores: tableScores.slice(0, 3).map(s => ({ table: s.table, score: s.score }))
         });
-        
+
         // Create enhanced field mappings using pattern recognition
         const fieldMappings = [];
         const unmappedFields = [];
-        
+
         for (const field of fields) {
             const targetField = this.intelligentFieldMapping(field, detectedTable);
-            
+
             if (targetField) {
                 fieldMappings.push({
                     source_field: field.fieldName,
@@ -645,7 +663,7 @@ class DataMapper {
                 });
             }
         }
-        
+
         return {
             tables: [{
                 table_name: detectedTable,
@@ -657,27 +675,27 @@ class DataMapper {
             unmapped_fields: unmappedFields
         };
     }
-    
+
     /**
      * Intelligent field mapping using pattern recognition and schema knowledge
      */
     intelligentFieldMapping(field, tableName) {
         const schemaFields = this.unifiedSchema[tableName];
         if (!schemaFields) return null;
-        
+
         const normalized = field.normalizedName || this.normalizeFieldName(field.fieldName);
         const category = field.fieldCategory;
-        
+
         // Priority 1: Direct match in schema
         for (const schemaField of schemaFields) {
             if (schemaField === 'business_id') continue; // Skip auto-added field
-            
+
             const normalizedSchema = this.normalizeFieldName(schemaField);
             if (normalized === normalizedSchema) {
                 return { name: schemaField, confidence: 0.95 };
             }
         }
-        
+
         // Priority 2: Use field category from pattern matching
         if (category && category.category !== 'unknown') {
             const mappingRules = {
@@ -695,7 +713,7 @@ class DataMapper {
                 vendor: {
                     name: 'supplier_name',
                     type: null,
-                    contact: 'contact_person',
+                    contact: 'email', // Will be determined by value type (email vs name)
                     address: 'address',
                     website: null,
                     reliability: null,
@@ -732,9 +750,20 @@ class DataMapper {
                     phone: 'phone',
                     address: 'billing_address',
                     type: 'customer_type'
+                },
+                // Investor patterns
+                investor: {
+                    name: 'investor_name',
+                    contact: 'contact_person',
+                    email: 'email',
+                    phone: 'phone',
+                    address: 'address',
+                    investment_date: 'initial_investment_date',
+                    terms: 'investment_terms',
+                    status: 'status'
                 }
             };
-            
+
             const tableMapping = mappingRules[category.category];
             if (tableMapping && tableMapping[category.fieldType]) {
                 const targetField = tableMapping[category.fieldType];
@@ -743,92 +772,107 @@ class DataMapper {
                 }
             }
         }
-        
+
         // Priority 3: Fuzzy matching with schema fields
         let bestMatch = null;
         let bestScore = 0;
-        
+
         for (const schemaField of schemaFields) {
             if (schemaField === 'business_id') continue;
-            
+
             const normalizedSchema = this.normalizeFieldName(schemaField);
             const score = this.calculateSimilarity(normalized, normalizedSchema);
-            
+
             if (score > bestScore && score > 0.6) {
                 bestScore = score;
                 bestMatch = schemaField;
             }
         }
-        
+
         if (bestMatch) {
             return { name: bestMatch, confidence: Math.min(0.8, bestScore) };
         }
-        
+
         // Priority 4: Semantic matching for common patterns
         const semanticMappings = {
             // ID fields
-            'id': tableName === 'product' ? 'product_id' : 
-                  tableName === 'supplier' ? 'supplier_id' :
-                  tableName === 'customer' ? 'customer_id' : null,
+            'id': tableName === 'product' ? 'product_id' :
+                tableName === 'supplier' ? 'supplier_id' :
+                    tableName === 'customer' ? 'customer_id' :
+                        tableName === 'investor' ? 'investor_id' : null,
             // Name fields
             'name': tableName === 'product' ? 'product_name' :
-                    tableName === 'supplier' ? 'supplier_name' :
-                    tableName === 'customer' ? 'customer_name' : null,
+                tableName === 'supplier' ? 'supplier_name' :
+                    tableName === 'customer' ? 'customer_name' :
+                        tableName === 'investor' ? 'investor_name' : null,
+            'vendor': tableName === 'supplier' ? 'supplier_name' : null,
+            'supplier': tableName === 'supplier' ? 'supplier_name' : null,
+            'investor': tableName === 'investor' ? 'investor_name' : null,
             // Amount/Price fields
-            'amount': tableName.includes('order') ? 'total_amount' : 'price',
+            'amount': tableName.includes('order') ? 'total_amount' :
+                tableName === 'investment' ? 'investment_amount' : 'price',
             'total': 'total_amount',
             'cost': tableName === 'product' ? 'price' : 'total_amount',
-            'price': tableName === 'product' ? 'selling_price' : 'total_amount',
+            'price': tableName === 'product' ? 'price' : 'total_amount',
+            'investment': tableName === 'investment' ? 'investment_amount' : null,
             // Date fields
-            'date': 'order_date',
+            'date': tableName.includes('order') ? 'order_date' :
+                tableName === 'investor' ? 'initial_investment_date' :
+                    tableName === 'investment' ? 'investment_date' : null,
+            // Contact fields
+            'contact': tableName === 'supplier' || tableName === 'investor' ? 'contact_person' : null,
+            'email': 'email',
+            'phone': 'phone',
+            'address': tableName === 'customer' ? 'billing_address' : 'address',
             // Status fields
             'status': 'status',
             // Description/Notes
             'description': 'description',
             'notes': tableName === 'purchase_order' ? 'notes' : 'description',
-            'remarks': 'description'
+            'remarks': 'description',
+            'terms': tableName === 'investor' ? 'investment_terms' : null
         };
-        
+
         for (const [pattern, targetField] of Object.entries(semanticMappings)) {
             if (normalized.includes(pattern) && targetField && schemaFields.includes(targetField)) {
                 return { name: targetField, confidence: 0.7 };
             }
         }
-        
+
         return null;
     }
-    
+
     /**
      * Calculate string similarity score (0-1)
      */
     calculateSimilarity(str1, str2) {
         if (str1 === str2) return 1.0;
         if (str1.includes(str2) || str2.includes(str1)) return 0.8;
-        
+
         // Levenshtein-based similarity
         const longer = str1.length > str2.length ? str1 : str2;
         const shorter = str1.length > str2.length ? str2 : str1;
-        
+
         if (longer.length === 0) return 1.0;
-        
+
         const editDistance = this.levenshteinDistance(str1, str2);
         return (longer.length - editDistance) / longer.length;
     }
-    
+
     /**
      * Calculate Levenshtein distance between two strings
      */
     levenshteinDistance(str1, str2) {
         const matrix = [];
-        
+
         for (let i = 0; i <= str2.length; i++) {
             matrix[i] = [i];
         }
-        
+
         for (let j = 0; j <= str1.length; j++) {
             matrix[0][j] = j;
         }
-        
+
         for (let i = 1; i <= str2.length; i++) {
             for (let j = 1; j <= str1.length; j++) {
                 if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
@@ -842,26 +886,26 @@ class DataMapper {
                 }
             }
         }
-        
+
         return matrix[str2.length][str1.length];
     }
-    
+
     /**
      * Suggest alternative mappings for unmapped fields
      */
     suggestAlternatives(field, tableName) {
         const schemaFields = this.unifiedSchema[tableName];
         if (!schemaFields) return [];
-        
+
         const normalized = field.normalizedName || this.normalizeFieldName(field.fieldName);
         const suggestions = [];
-        
+
         for (const schemaField of schemaFields) {
             if (schemaField === 'business_id') continue;
-            
+
             const normalizedSchema = this.normalizeFieldName(schemaField);
             const similarity = this.calculateSimilarity(normalized, normalizedSchema);
-            
+
             if (similarity > 0.4) {
                 suggestions.push({
                     field: schemaField,
@@ -869,10 +913,10 @@ class DataMapper {
                 });
             }
         }
-        
+
         return suggestions.sort((a, b) => b.similarity - a.similarity).slice(0, 3);
     }
-    
+
     /**
      * Determine transformation needed for field
      */
@@ -888,13 +932,13 @@ class DataMapper {
         }
         return 'none';
     }
-    
+
     /**
      * Infer relationships between tables based on field mappings
      */
     inferRelationships(tableName, fieldMappings) {
         const relationships = [];
-        
+
         // Check for foreign key fields
         const fkPatterns = {
             'supplier_id': { related_table: 'supplier', relationship_type: 'foreign_key' },
@@ -904,7 +948,7 @@ class DataMapper {
             'brand_id': { related_table: 'product_brand', relationship_type: 'foreign_key' },
             'investor_id': { related_table: 'investor', relationship_type: 'foreign_key' }
         };
-        
+
         for (const mapping of fieldMappings) {
             if (fkPatterns[mapping.target_field]) {
                 const relation = fkPatterns[mapping.target_field];
@@ -917,7 +961,7 @@ class DataMapper {
                 }
             }
         }
-        
+
         return relationships;
     }
 
@@ -927,12 +971,12 @@ class DataMapper {
     guessTargetField(sourceName, tableName) {
         const lowerSource = sourceName.toLowerCase();
         const targetFields = this.unifiedSchema[tableName] || [];
-        
+
         // Direct match
         if (targetFields.includes(lowerSource)) {
             return lowerSource;
         }
-        
+
         // Fuzzy matching
         for (const targetField of targetFields) {
             const lowerTarget = targetField.toLowerCase();
@@ -940,18 +984,18 @@ class DataMapper {
                 return targetField;
             }
         }
-        
+
         // Common patterns
         if (lowerSource.includes('name')) {
             const nameField = targetFields.find(f => f.includes('_name'));
             if (nameField) return nameField;
         }
-        
+
         if (lowerSource.includes('price') || lowerSource.includes('amount') || lowerSource.includes('total')) {
             const priceField = targetFields.find(f => f.includes('price') || f.includes('amount') || f.includes('total'));
             if (priceField) return priceField;
         }
-        
+
         return null;
     }
 
@@ -963,20 +1007,20 @@ class DataMapper {
 
         const fieldDescriptions = fields.map(field => {
             let desc = `- ${field.fieldName} (${field.dataType})`;
-            
+
             // Add pattern recognition info if available
             if (field.fieldCategory && field.fieldCategory.category !== 'unknown') {
                 desc += ` [${field.fieldCategory.category}:${field.fieldCategory.fieldType}]`;
             }
-            
+
             // Add sample values
             desc += `: Example values: [${field.sampleValues.join(', ')}]`;
-            
+
             // Add cash flow indicator
             if (field.isCashFlowRelated) {
                 desc += ' [💰 CASH_FLOW_RELATED]';
             }
-            
+
             return desc;
         }).join('\n');
 
@@ -1127,12 +1171,12 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
     parseLLMResponse(responseContent) {
         try {
             console.log('Raw LLM Response (first 500 chars):', responseContent.substring(0, 500));
-            
+
             // Clean response - remove markdown code blocks if present
             let cleanedContent = responseContent.trim();
             cleanedContent = cleanedContent.replace(/```json\s*/g, '');
             cleanedContent = cleanedContent.replace(/```\s*/g, '');
-            
+
             // Extract JSON object
             const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
             if (!jsonMatch) {
@@ -1170,14 +1214,14 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
 
                 // Get valid columns for this table
                 const validColumns = this.unifiedSchema[table.table_name] || [];
-                
+
                 // Filter out invalid target fields
                 const originalCount = table.field_mappings.length;
                 table.field_mappings = table.field_mappings.filter(mapping => {
                     const isValid = validColumns.includes(mapping.target_field);
                     if (!isValid) {
                         console.warn(`⚠️  Removing invalid mapping: ${mapping.source_field} → ${mapping.target_field} (column does not exist in ${table.table_name})`);
-                        
+
                         // Add to unmapped fields
                         if (!result.unmapped_fields) {
                             result.unmapped_fields = [];
@@ -1212,7 +1256,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
         } catch (error) {
             console.error('Error parsing LLM response:', error.message);
             console.error('Response content:', responseContent.substring(0, 1000));
-            
+
             throw new Error(`Failed to parse LLM response: ${error.message}`);
         }
     }
@@ -1232,7 +1276,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
         try {
             const db = mongoose.connection.db;
             const collection = db.collection(collectionName);
-            
+
             this.log('progress', 'Loading documents from MongoDB...');
             const allDocs = await collection.find({}).toArray();
 
@@ -1288,7 +1332,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 // Validate and deduplicate
                 this.log('progress', 'Validating and deduplicating records...');
                 const cleanDocs = this.validateAndDeduplicate(transformedDocs, tableMapping.table_name);
-                
+
                 const duplicatesRemoved = transformedDocs.length - cleanDocs.length;
                 this.log('success', 'Validation complete', {
                     totalRecords: transformedDocs.length,
@@ -1305,30 +1349,32 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 }
 
                 // Insert in batches to avoid timeout
-                const batchSize = 100;
+                const batchSize = 50; // Smaller batch size for upsert logic
                 let insertedCount = 0;
+                let updatedCount = 0;
                 let errors = [];
                 const totalBatches = Math.ceil(cleanDocs.length / batchSize);
 
-                this.log('info', `Inserting ${cleanDocs.length} records in ${totalBatches} batches`);
+                this.log('info', `Upserting ${cleanDocs.length} records in ${totalBatches} batches`);
 
                 for (let i = 0; i < cleanDocs.length; i += batchSize) {
                     const batch = cleanDocs.slice(i, i + batchSize);
                     const batchNum = Math.floor(i / batchSize) + 1;
-                    
+
                     try {
-                        this.log('progress', `Inserting batch ${batchNum}/${totalBatches}...`, {
+                        this.log('progress', `Processing batch ${batchNum}/${totalBatches}...`, {
                             batchSize: batch.length,
                             table: tableMapping.table_name
                         });
 
-                        const { data, error } = await supabaseAdmin
-                            .from(tableMapping.table_name)
-                            .insert(batch)
-                            .select();
+                        const { data, error, inserted, updated } = await this.upsertBatch(
+                            tableMapping.table_name,
+                            batch,
+                            businessId
+                        );
 
                         if (error) {
-                            this.log('error', `Batch ${batchNum} insertion failed`, {
+                            this.log('error', `Batch ${batchNum} upsert failed`, {
                                 batch: batchNum,
                                 error: error.message,
                                 code: error.code,
@@ -1336,14 +1382,17 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                             });
                             errors.push(error);
                         } else {
-                            insertedCount += batch.length;
-                            this.log('success', `Batch ${batchNum}/${totalBatches} inserted successfully`, {
-                                recordsInserted: batch.length,
-                                totalInserted: insertedCount
+                            insertedCount += inserted;
+                            updatedCount += updated;
+                            this.log('success', `Batch ${batchNum}/${totalBatches} processed successfully`, {
+                                recordsInserted: inserted,
+                                recordsUpdated: updated,
+                                totalInserted: insertedCount,
+                                totalUpdated: updatedCount
                             });
                         }
                     } catch (batchError) {
-                        this.log('error', `Batch ${batchNum} insertion exception`, {
+                        this.log('error', `Batch ${batchNum} upsert exception`, {
                             batch: batchNum,
                             error: batchError.message
                         });
@@ -1357,15 +1406,17 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                     totalTransformed: transformedDocs.length,
                     cleanCount: cleanDocs.length,
                     insertedCount: insertedCount,
+                    updatedCount: updatedCount,
                     errors: errors.length > 0 ? errors : undefined
                 };
 
-                this.log(errors.length === 0 ? 'success' : 'warning', 
-                    `Table ${tableMapping.table_name} migration ${errors.length === 0 ? 'completed' : 'completed with errors'}`, 
+                this.log(errors.length === 0 ? 'success' : 'warning',
+                    `Table ${tableMapping.table_name} migration ${errors.length === 0 ? 'completed' : 'completed with errors'}`,
                     {
                         inserted: insertedCount,
+                        updated: updatedCount,
                         total: cleanDocs.length,
-                        successRate: `${((insertedCount / cleanDocs.length) * 100).toFixed(1)}%`,
+                        successRate: `${(((insertedCount + updatedCount) / cleanDocs.length) * 100).toFixed(1)}%`,
                         errors: errors.length
                     }
                 );
@@ -1378,6 +1429,181 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
             console.error('Error migrating multi-table data:', err);
             throw err;
         }
+    }
+
+    /**
+     * Upsert a batch of records into a table
+     */
+    async upsertBatch(tableName, batch, businessId) {
+        const nameFields = {
+            supplier: 'supplier_name',
+            investor: 'investor_name',
+            customer: 'customer_name',
+            product_category: 'category_name',
+            product_brand: 'brand_name',
+        };
+        const nameField = nameFields[tableName];
+
+        if (!nameField) {
+            // For tables without a simple name identifier, do a simple insert.
+            const { error, data } = await supabaseAdmin.from(tableName).insert(batch).select();
+            return { error, data, inserted: data ? data.length : 0, updated: 0 };
+        }
+
+        const names = batch.map(doc => doc[nameField]).filter(Boolean);
+        if (names.length === 0) {
+            const { error, data } = await supabaseAdmin.from(tableName).insert(batch).select();
+            return { error, data, inserted: data ? data.length : 0, updated: 0 };
+        }
+
+        // Find existing records
+        const { data: existingRecords, error: fetchError } = await supabaseAdmin
+            .from(tableName)
+            .select(`*`)
+            .eq('business_id', businessId)
+            .in(nameField, names);
+
+        if (fetchError) {
+            this.log('error', `Failed to fetch existing records for upsert`, { table: tableName, error: fetchError });
+            return { error: fetchError, data: null, inserted: 0, updated: 0 };
+        }
+
+        const existingMap = new Map(existingRecords.map(rec => [rec[nameField], rec]));
+        const toInsert = [];
+        const toUpdate = [];
+
+        for (const doc of batch) {
+            const existing = existingMap.get(doc[nameField]);
+            if (existing) {
+                // Merge new data into existing record, keeping existing non-null values
+                const merged = { ...doc, ...existing };
+                for (const key in doc) {
+                    if (doc[key] !== null && doc[key] !== undefined) {
+                        merged[key] = doc[key];
+                    }
+                }
+                toUpdate.push(merged);
+            } else {
+                toInsert.push(doc);
+            }
+        }
+
+        let insertedCount = 0;
+        let updatedCount = 0;
+        let errors = [];
+
+        // Perform inserts
+        if (toInsert.length > 0) {
+            // For SERIAL (auto-increment) tables, remove any client-generated IDs
+            const autoIncrementFields = {
+                'supplier': 'supplier_id',
+                'investor': 'investor_id',
+                'customer': 'customer_id',
+                'product_category': 'category_id',
+                'product_brand': 'brand_id',
+                'investment': 'investment_id',
+                'investors_capital': 'capital_id',
+                'purchase_order': 'purchase_order_id',
+                'sales_order': 'sales_order_id'
+            };
+
+            const autoIncrementField = autoIncrementFields[tableName];
+
+            // Clean the records before insertion
+            const cleanedInserts = toInsert.map(doc => {
+                const cleaned = { ...doc };
+                // Remove auto-increment field if it exists, let database generate it
+                if (autoIncrementField && cleaned[autoIncrementField]) {
+                    delete cleaned[autoIncrementField];
+                }
+                return cleaned;
+            });
+
+            const { error, data } = await supabaseAdmin.from(tableName).insert(cleanedInserts).select();
+            if (error) {
+                this.log('error', `Insert failed for ${tableName}`, {
+                    error: error.message,
+                    code: error.code,
+                    hint: error.hint,
+                    details: error.details
+                });
+                errors.push(error);
+            }
+            else insertedCount = data.length;
+        }
+
+        // Perform updates
+        if (toUpdate.length > 0) {
+            // Get the correct primary key field for this table
+            const primaryKeyFields = {
+                'supplier': 'supplier_id',
+                'investor': 'investor_id',
+                'customer': 'customer_id',
+                'product_category': 'category_id',
+                'product_brand': 'brand_id',
+                'product': 'product_id',
+                'purchase_order': 'purchase_order_id',
+                'sales_order': 'sales_order_id',
+                'investment': 'investment_id',
+                'investors_capital': 'capital_id'
+            };
+
+            const primaryKeyField = primaryKeyFields[tableName];
+
+            for (const record of toUpdate) {
+                // Use the correct primary key field, not just 'id'
+                const pkValue = record[primaryKeyField];
+                if (!pkValue) {
+                    this.log('warning', `Skipping update - missing primary key ${primaryKeyField}`, {
+                        table: tableName,
+                        record: record
+                    });
+                    continue;
+                }
+
+                const { error } = await supabaseAdmin
+                    .from(tableName)
+                    .update(record)
+                    .eq(primaryKeyField, pkValue);
+
+                if (error) errors.push(error);
+                else updatedCount++;
+            }
+        }
+
+        const combinedError = errors.length > 0 ? new Error(errors.map(e => e.message).join('; ')) : null;
+
+        return { error: combinedError, data: null, inserted: insertedCount, updated: updatedCount };
+    }
+
+    /**
+     * Helper function to extract field value from document with flexible field name matching
+     * Handles variations in field names (spaces, case, underscores, etc.)
+     */
+    getFieldValue(doc, fieldVariations) {
+        // First, try exact matches from the variations array
+        for (const fieldName of fieldVariations) {
+            if (doc[fieldName] !== undefined && doc[fieldName] !== null && doc[fieldName] !== '') {
+                return doc[fieldName];
+            }
+        }
+
+        // If no exact match, try fuzzy matching with trimmed keys
+        const docKeys = Object.keys(doc);
+        for (const fieldName of fieldVariations) {
+            const normalizedTarget = fieldName.toLowerCase().replace(/[\s_-]/g, '');
+            for (const docKey of docKeys) {
+                const normalizedKey = docKey.toLowerCase().replace(/[\s_-]/g, '');
+                if (normalizedKey === normalizedTarget) {
+                    const value = doc[docKey];
+                    if (value !== undefined && value !== null && value !== '') {
+                        return value;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -1394,12 +1620,12 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
             const categories = new Map();
             const brands = new Map();
             const products = [];
-            
+
             let totalUnitsToCreate = 0;
 
             // Step 1: Extract unique categories and brands from documents
             this.log('progress', 'Step 1/4: Analyzing product data structure');
-            
+
             // Debug: Log first document fields
             if (documents.length > 0) {
                 this.log('info', 'Sample document fields', {
@@ -1407,12 +1633,23 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                     sampleData: documents[0]
                 });
             }
-            
+
             for (const doc of documents) {
+                // Skip completely empty documents or those with only metadata fields
+                const hasAnyProductField = doc['Product no.'] || doc['Item name'] || doc['Brand'] || doc['Type'] ||
+                    doc['Name'] || doc['Product'] || doc['SKU'];
+                if (!hasAnyProductField) {
+                    continue;  // Silently skip empty documents
+                }
+
                 // Extract category from multiple sources - prioritize explicit category, then derive from collection name
-                let categoryName = doc['Type'] || doc['type'] || doc['Category'] || doc['category'] ||
-                                    doc['Product Type'] || doc['product_type'] || doc['Item Type'] || doc['item_type'];
-                
+                let categoryName = this.getFieldValue(doc, [
+                    'Type', 'type', 'TYPE',
+                    'Category', 'category', 'CATEGORY',
+                    'Product Type', 'product_type', 'Product type', 'PRODUCT TYPE',
+                    'Item Type', 'item_type', 'Item type', 'ITEM TYPE'
+                ]);
+
                 // If no explicit category, try to derive from collection name or sheet name
                 if (!categoryName) {
                     // Extract category from collection name patterns like "businessid_Books", "businessid_Stethoscope"
@@ -1422,16 +1659,16 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                         const potentialCategory = collectionParts[collectionParts.length - 1]
                             .replace(/[-_]/g, ' ') // Replace hyphens/underscores with spaces
                             .trim();
-                        
+
                         // Common category mappings based on product type keywords
                         if (potentialCategory.toLowerCase().includes('book')) {
                             categoryName = 'Books';
-                        } else if (potentialCategory.toLowerCase().includes('stethoscope') || 
-                                   potentialCategory.toLowerCase().includes('bp machine') ||
-                                   potentialCategory.toLowerCase().includes('instrument')) {
+                        } else if (potentialCategory.toLowerCase().includes('stethoscope') ||
+                            potentialCategory.toLowerCase().includes('bp machine') ||
+                            potentialCategory.toLowerCase().includes('instrument')) {
                             categoryName = 'Medical Equipment';
-                        } else if (potentialCategory.toLowerCase().includes('dress') || 
-                                   potentialCategory.toLowerCase().includes('ot dress')) {
+                        } else if (potentialCategory.toLowerCase().includes('dress') ||
+                            potentialCategory.toLowerCase().includes('ot dress')) {
                             categoryName = 'Medical Apparel';
                         } else if (potentialCategory.toLowerCase().includes('main')) {
                             categoryName = 'General Merchandise';
@@ -1440,13 +1677,18 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                         }
                     }
                 }
-                
-                // Default category if still not found
-                if (!categoryName) {
-                    categoryName = 'Uncategorized';
+
+                // Skip if category is invalid or just whitespace
+                if (!categoryName || categoryName.trim() === '' || categoryName === 'undefined' || categoryName === 'null') {
+                    this.log('warning', `Skipping document due to invalid category name: '${categoryName}'`, { doc: doc });
+                    continue;
                 }
-                
-                if (categoryName && categoryName.trim() && !categories.has(categoryName)) {
+
+                // Trim category name
+                categoryName = categoryName.trim();
+
+                // Add valid category to the Map
+                if (!categories.has(categoryName)) {
                     categories.set(categoryName, {
                         category_name: categoryName,
                         description: `Category: ${categoryName}`,
@@ -1456,33 +1698,58 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 }
 
                 // Extract brand - prioritize explicit Brand field, fall back to category
-                let brandName = doc['Brand'] || doc['brand'] || doc['Brand/Name'] || doc['brand_name'] ||
-                               doc['Name'] || doc['name']; // For sheets like "Instrument" that use "Name"
-                
+                let brandName = this.getFieldValue(doc, [
+                    'Brand', 'brand', 'BRAND',
+                    'Brand/Name', 'brand_name', 'Brand Name', 'BRAND NAME',
+                    'Name', 'name', 'NAME' // For sheets like "Instrument" that use "Name"
+                ]);
+
                 // If no explicit brand, use category as brand
                 if (!brandName || brandName.trim() === '') {
                     brandName = categoryName;
                 }
-                
-                const priceValue = doc['Price'] || doc['price'] || doc['Unit Price'] || doc['unit_price'] ||
-                                  doc['Price per unit'] || doc['price_per_unit'] ||
-                                  doc['Cost per unit'] || doc['cost_per_unit'];
-                
-                // Store unique brands
-                if (brandName && !brands.has(brandName)) {
+
+                // Skip if brand is invalid or just whitespace
+                if (!brandName || brandName.trim() === '' || brandName === 'undefined' || brandName === 'null') {
+                    this.log('warning', `Skipping document due to invalid brand name: '${brandName}'`, { doc: doc });
+                    continue;
+                }
+
+                // Trim brand name
+                brandName = brandName.trim();
+
+                // Extract unit price for the brand - try multiple field variations
+                // Priority: Unit Cost -> Cost -> Unit Price -> Price -> Selling Price
+                const priceValue = this.getFieldValue(doc, [
+                    'Unit Cost', 'unit_cost', 'Unit cost', 'UNIT COST',
+                    'Cost per unit', 'cost_per_unit', 'Cost Per Unit',
+                    'Cost', 'cost', 'COST',
+                    'Unit Price', 'unit_price', 'Unit price', 'UNIT PRICE',
+                    'Price per unit', 'price_per_unit', 'Price Per Unit',
+                    'Price', 'price', 'PRICE'
+                    
+                ]);
+
+                // Store unique brand with unit_price
+                if (!brands.has(brandName)) {
+                    const parsedPrice = priceValue ? this.parseMonetaryValue(String(priceValue)) : null;
                     brands.set(brandName, {
                         brand_name: brandName,
                         description: `Brand: ${brandName}`,
-                        unit_price: priceValue ? this.parseMonetaryValue(String(priceValue)) : null,
+                        unit_price: parsedPrice, // Brand-level unit price
                         business_id: businessId
                         // brand_id will be set from database (either existing or newly inserted)
                     });
+
+                    if (parsedPrice) {
+                        this.log('info', `Brand ${brandName} unit price: ${parsedPrice}`);
+                    }
                 }
 
                 // Count stock for total products - try multiple field variations
                 const stockValue = doc['Stock'] || doc['stock'] || doc['Quantity'] || doc['quantity'] ||
-                                  doc['Units'] || doc['units'] || doc['In stock'] || doc['in_stock'] ||
-                                  doc['Inventory'] || doc['inventory'];
+                    doc['Units'] || doc['units'] || doc['In stock'] || doc['in_stock'] ||
+                    doc['Inventory'] || doc['inventory'];
                 const stock = parseInt(stockValue) || 1;
                 totalUnitsToCreate += stock;
             }
@@ -1498,7 +1765,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
             this.log('progress', `Step 2/4: Creating ${categories.size} product categories`);
             const categoryArray = Array.from(categories.values());
             let categoriesInserted = 0;
-            
+
             if (categoryArray.length > 0) {
                 // First, check for existing categories and reuse their IDs
                 const categoryNames = categoryArray.map(c => c.category_name);
@@ -1507,7 +1774,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                     .select('category_id, category_name')
                     .eq('business_id', businessId)
                     .in('category_name', categoryNames);
-                
+
                 // Update Map with existing IDs
                 if (existingCategories && existingCategories.length > 0) {
                     existingCategories.forEach(existing => {
@@ -1518,12 +1785,12 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                         }
                     });
                 }
-                
+
                 // Insert only new categories
                 const newCategories = categoryArray.filter(cat => {
                     return !existingCategories?.some(existing => existing.category_name === cat.category_name);
                 });
-                
+
                 if (newCategories.length > 0) {
                     const { data: catData, error: catError } = await supabaseAdmin
                         .from('product_category')
@@ -1550,7 +1817,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 } else {
                     this.log('success', `✓ All categories already exist, reusing existing IDs`);
                 }
-                
+
                 categoriesInserted = categoryArray.length;
             }
 
@@ -1558,7 +1825,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
             this.log('progress', `Step 3/4: Creating ${brands.size} product brands`);
             const brandArray = Array.from(brands.values()).filter(b => b.brand_name); // Filter out nulls
             let brandsInserted = 0;
-            
+
             if (brandArray.length > 0) {
                 // Check for existing brands and reuse their IDs
                 const brandNames = brandArray.map(b => b.brand_name);
@@ -1567,7 +1834,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                     .select('brand_id, brand_name')
                     .eq('business_id', businessId)
                     .in('brand_name', brandNames);
-                
+
                 // Update Map with existing IDs
                 if (existingBrands && existingBrands.length > 0) {
                     existingBrands.forEach(existing => {
@@ -1578,12 +1845,12 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                         }
                     });
                 }
-                
+
                 // Insert only new brands
                 const newBrands = brandArray.filter(brand => {
                     return !existingBrands?.some(existing => existing.brand_name === brand.brand_name);
                 });
-                
+
                 if (newBrands.length > 0) {
                     const { data: brandData, error: brandError } = await supabaseAdmin
                         .from('product_brand')
@@ -1610,72 +1877,151 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 } else {
                     this.log('success', `✓ All brands already exist, reusing existing IDs`);
                 }
-                
+
                 brandsInserted = brandArray.length;
             }
 
             // Step 4: Create individual product units
             this.log('progress', `Step 4/4: Creating ${totalUnitsToCreate} individual product units`);
-            
+
             let productUnitCounter = 0;
             for (const doc of documents) {
+                // Skip documents with missing critical fields (same validation as Step 1)
+                const hasAnyProductField = doc['Product no.'] || doc['Item name'] || doc['Brand'] || doc['Type'];
+                if (!hasAnyProductField) {
+                    continue;
+                }
+
                 // Extract item/product name - try multiple field variations
-                let itemName = doc['Item name'] || doc['Item Name'] || doc['item_name'] || 
-                              doc['Product'] || doc['product'] || doc['Product name'] || doc['product_name'] ||
-                              doc['Name'] || doc['name'] || doc['Brand/Name'] || doc['Brand'];
-                
+                let itemName = this.getFieldValue(doc, [
+                    'Item name', 'Item Name', 'item_name', 'ITEM NAME',
+                    'Product', 'product', 'PRODUCT',
+                    'Product name', 'product_name', 'Product Name', 'PRODUCT NAME',
+                    'Name', 'name', 'NAME',
+                    'Brand/Name', 'Brand', 'brand'
+                ]);
+
                 // If still no name, construct from available fields (Product no. + Brand/Color/Size)
                 if (!itemName) {
                     const productNo = doc['Product no.'] || doc['Product No.'] || doc['product_no'];
                     const brand = doc['Brand'] || doc['brand'];
                     const color = doc['Colour'] || doc['Color'] || doc['colour'];
                     const size = doc['Size'] || doc['size'];
-                    
+
                     if (brand) itemName = brand;
                     if (color) itemName = itemName ? `${itemName} - ${color}` : color;
                     if (size) itemName = itemName ? `${itemName} - ${size}` : size;
                     if (!itemName && productNo) itemName = `Product ${productNo}`;
                 }
-                
+
                 // Re-extract category (same as Step 1 logic)
-                let categoryName = doc['Type'] || doc['type'] || doc['Category'] || doc['category'] ||
-                                    doc['Product Type'] || doc['product_type'] || doc['Item Type'] || doc['item_type'];
-                
+                let categoryName = this.getFieldValue(doc, [
+                    'Type', 'type', 'TYPE',
+                    'Category', 'category', 'CATEGORY',
+                    'Product Type', 'product_type', 'Product type', 'PRODUCT TYPE',
+                    'Item Type', 'item_type', 'Item type', 'ITEM TYPE'
+                ]);
+
                 if (!categoryName) {
                     const collectionParts = collectionName.split('_');
                     if (collectionParts.length > 1) {
                         const potentialCategory = collectionParts[collectionParts.length - 1].replace(/[-_]/g, ' ').trim();
                         if (potentialCategory.toLowerCase().includes('book')) categoryName = 'Books';
-                        else if (potentialCategory.toLowerCase().includes('stethoscope') || 
-                                 potentialCategory.toLowerCase().includes('bp machine') ||
-                                 potentialCategory.toLowerCase().includes('instrument')) categoryName = 'Medical Equipment';
+                        else if (potentialCategory.toLowerCase().includes('stethoscope') ||
+                            potentialCategory.toLowerCase().includes('bp machine') ||
+                            potentialCategory.toLowerCase().includes('instrument')) categoryName = 'Medical Equipment';
                         else if (potentialCategory.toLowerCase().includes('dress')) categoryName = 'Medical Apparel';
                         else if (potentialCategory.toLowerCase().includes('main')) categoryName = 'General Merchandise';
                         else categoryName = potentialCategory;
                     }
                 }
                 if (!categoryName) categoryName = 'Uncategorized';
-                
+
                 // Extract stock/units - try multiple variations
-                const stockValue = doc['Stock'] || doc['stock'] || doc['Quantity'] || doc['quantity'] ||
-                                  doc['Units'] || doc['units'] || doc['In stock'] || doc['in_stock'] ||
-                                  doc['Inventory'] || doc['inventory'];
+                const stockValue = this.getFieldValue(doc, [
+                    'Stock', 'stock', 'STOCK',
+                    'Quantity', 'quantity', 'QUANTITY',
+                    'Units', 'units', 'UNITS',
+                    'In stock', 'in_stock', 'In Stock', 'IN STOCK',
+                    'Inventory', 'inventory', 'INVENTORY'
+                ]);
                 const stock = parseInt(stockValue) || 1;
-                
+
                 // Extract product ID
                 const itemId = doc['Item ID'] || doc['Item Id'] || doc['item_id'] || doc['id'] ||
-                              doc['Product no.'] || doc['Product No.'] || doc['product_no'];
-                
-                // Extract pricing - try multiple variations
-                const price = doc['Price'] || doc['price'] || doc['Unit Price'] || doc['unit_price'] ||
-                             doc['Price per unit'] || doc['price_per_unit'] ||
-                             doc['Selling Price'] || doc['selling_price'];
-                
-                const cost = doc['Cost'] || doc['cost'] || doc['Cost per unit'] || doc['cost_per_unit'];
-                
-                // Status
-                const status = doc['Status'] || doc['status'] || 'Active';
-                
+                    doc['Product no.'] || doc['Product No.'] || doc['product_no'];
+
+                // Extract pricing - IMPORTANT: Extract BOTH cost and selling price separately
+                // Cost price (purchase/production cost) - look specifically for "cost" fields
+                // PRIORITY: Use per-unit costs first, then fall back to total cost
+                // Extract pricing - IMPORTANT: Extract BOTH cost and selling price separately
+                // Be very specific to avoid field confusion
+
+                // Step 1: Extract COST (purchase/production cost) - ONLY cost-specific fields
+                let cost = null;
+                const costFields = [
+                    'Unit Cost', 'unit_cost', 'Unit cost', 'UNIT COST',
+                    'Cost per unit', 'cost_per_unit', 'Cost Per Unit', 'COST PER UNIT',
+                    'Purchase Price', 'purchase_price', 'Purchase price', 'PURCHASE PRICE',
+                    'Cost', 'cost', 'COST'
+                ];
+
+                for (const field of costFields) {
+                    const value = doc[field];
+                    if (value !== undefined && value !== null && value !== '') {
+                        cost = value;
+                        break;
+                    }
+                }
+
+                // Step 2: Extract SELLING PRICE (retail price) - ONLY selling-specific fields
+                let sellingPrice = null;
+                const sellingFields = [
+                    'Selling Price', 'selling_price', 'Selling price', 'SELLING PRICE',
+                    'Selling Price per unit', 'selling_price_per_unit',
+                    'Sale Price', 'sale_price', 'Sale price', 'SALE PRICE',
+                    'Retail Price', 'retail_price', 'Retail price', 'RETAIL PRICE',
+                    'Unit Price', 'unit_price', 'Unit price', 'UNIT PRICE',
+                    'Price per unit', 'price_per_unit', 'Price Per Unit', 'PRICE PER UNIT'
+                ];
+
+                for (const field of sellingFields) {
+                    const value = doc[field];
+                    if (value !== undefined && value !== null && value !== '') {
+                        sellingPrice = value;
+                        break;
+                    }
+                }
+
+                // Step 3: Fallback - if only generic "Price" exists and no specific fields found
+                if (!cost && !sellingPrice) {
+                    const genericPrice = doc['Price'] || doc['price'] || doc['PRICE'];
+                    if (genericPrice) {
+                        // If only one price field exists, assume it's the selling price
+                        sellingPrice = genericPrice;
+                    }
+                }
+
+                // If cost is missing but we have selling price, we can't derive cost
+                // If selling price is missing but we have cost, we can't derive selling price
+                // Both should be present in the data
+
+                // Determine status based on inventory/stock availability
+                // If Status field says "In Stock", "Available", etc. → "In Stock"
+                // If Status field says "Out of Stock", "Sold", "Unavailable" → "Sold"
+                const statusField = doc['Status'] || doc['status'] || '';
+                const statusLower = String(statusField).toLowerCase();
+                let productStatus = 'In Stock'; // Default
+
+                if (statusLower.includes('out') || statusLower.includes('sold') ||
+                    statusLower.includes('unavailable') || statusLower.includes('depleted') ||
+                    stock <= 0) {
+                    productStatus = 'Sold';
+                } else if (statusLower.includes('stock') || statusLower.includes('available') ||
+                    statusLower.includes('active') || stock > 0) {
+                    productStatus = 'In Stock';
+                }
+
                 // Notes/Description
                 const notes = doc['Notes'] || doc['notes'] || doc['Description'] || doc['description'] || '';
 
@@ -1685,25 +2031,35 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 }
 
                 // Extract brand for this product
-                let productBrandName = doc['Brand'] || doc['brand'] || doc['Brand/Name'] || doc['brand_name'] ||
-                                       doc['Name'] || doc['name'];
-                
+                let productBrandName = this.getFieldValue(doc, [
+                    'Brand', 'brand', 'BRAND',
+                    'Brand/Name', 'brand_name', 'Brand Name', 'BRAND NAME',
+                    'Name', 'name', 'NAME'
+                ]);
+
                 // If no explicit brand, use category as brand
                 if (!productBrandName || productBrandName.trim() === '') {
                     productBrandName = categoryName;
                 }
 
+                // Validate brand name (same as Step 1)
+                if (!productBrandName || productBrandName.trim() === '' || productBrandName === 'undefined' || productBrandName === 'null') {
+                    this.log('warning', `Skipping product with invalid brand name: ${itemName}`);
+                    continue;
+                }
+
                 // Get the actual IDs from the Maps (which now have the correct IDs after checking existing records)
                 const brand = productBrandName ? brands.get(productBrandName) : null;
                 const category = categoryName ? categories.get(categoryName) : null;
-                
+
                 const brandId = brand ? brand.brand_id : null;
                 const categoryId = category ? category.category_id : null;
 
                 // Validate that we have proper IDs before creating products
                 if (!brandId || !categoryId) {
-                    this.log('error', `Missing brand_id or category_id for item: ${itemName}`, {
+                    this.log('warning', `Missing brand_id or category_id for item: ${itemName}`, {
                         category: categoryName,
+                        brand: productBrandName,
                         brandId: brandId,
                         categoryId: categoryId,
                         brandInMap: brand ? 'yes' : 'no',
@@ -1712,18 +2068,36 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                     continue; // Skip this item
                 }
 
+                // Parse prices - ensure both are extracted
+                const parsedCost = cost ? this.parseMonetaryValue(String(cost)) : null;
+                const parsedSellingPrice = sellingPrice ? this.parseMonetaryValue(String(sellingPrice)) : null;
+
+                // Warning if either price is missing
+                if (!parsedCost || !parsedSellingPrice) {
+                    this.log('warning', `Missing price data for ${itemName}`, {
+                        rawCost: cost,
+                        rawSellingPrice: sellingPrice,
+                        parsedCost: parsedCost,
+                        parsedSellingPrice: parsedSellingPrice,
+                        availableFields: Object.keys(doc)
+                    });
+                }
+
                 this.log('info', `Processing item: ${itemName}`, {
                     category: categoryName,
                     stock: stock,
                     brandId: brandId,
                     categoryId: categoryId,
-                    willCreate: stock + ' units'
+                    willCreate: stock + ' units (all In Stock)',
+                    cost: parsedCost,
+                    sellingPrice: parsedSellingPrice
                 });
 
                 // Create individual product records based on stock quantity
+                // All units from inventory are "In Stock" since they exist in the warehouse
                 for (let unitNum = 1; unitNum <= stock; unitNum++) {
                     productUnitCounter++;
-                    
+
                     const product = {
                         business_id: businessId,
                         product_id: this.generateIdFromValue(`${itemId}_${itemName}_${productBrandName}_unit_${unitNum}`),
@@ -1731,9 +2105,9 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                         description: notes || `${itemName} - Unit ${unitNum}`,
                         brand_id: brandId,
                         category_id: categoryId,
-                        price: cost ? this.parseMonetaryValue(String(cost)) : null, // Cost = purchase/production cost
-                        selling_price: price ? this.parseMonetaryValue(String(price)) : null, // Price = selling price
-                        status: status,
+                        price: parsedCost, // Unit Cost → price (purchase/cost price)
+                        selling_price: parsedSellingPrice, // Selling Price → selling_price (retail price)
+                        status: 'In Stock', // All inventory units are "In Stock" by definition
                         created_date: new Date().toISOString(),
                         stored_location: null,
                         expense: null,
@@ -1769,9 +2143,9 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                         .select();
 
                     if (error) {
-                        this.log('error', `Product batch ${batchNum} failed`, { 
+                        this.log('error', `Product batch ${batchNum} failed`, {
                             error: error.message,
-                            code: error.code 
+                            code: error.code
                         });
                     } else {
                         productsInserted += batch.length;
@@ -1827,7 +2201,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
 
             // Generate deduplication key
             const dedupKey = this.generateDeduplicationKey(doc, tableName);
-            
+
             if (seenKeys.has(dedupKey)) {
                 console.log(`Duplicate detected and skipped: ${dedupKey}`);
                 continue;
@@ -1842,6 +2216,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
 
     /**
      * Validate document has required fields
+     * Note: SERIAL (auto-increment) ID fields are NOT required as database generates them
      */
     validateDocument(doc, tableName) {
         // Must have business_id
@@ -1850,24 +2225,28 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
             return false;
         }
 
-        // Check table-specific required fields
+        // Check table-specific required fields (excluding SERIAL IDs which DB generates)
         const requiredFields = {
-            'product': ['product_id'],
-            'customer': ['customer_id'],
-            'supplier': ['supplier_id'],
-            'sales_order': ['sales_order_id'],
-            'purchase_order': ['purchase_order_id'],
-            'investor': ['investor_id'],
-            'investment': ['investment_id', 'investor_id'],
-            'product_category': ['category_id'],
-            'product_brand': ['brand_id']
+            'product': ['product_id'], // VARCHAR - needs to be present
+            'customer': ['customer_name'], // customer_id is SERIAL, but name is required
+            'supplier': ['supplier_name'], // supplier_id is SERIAL, but name is required
+            'sales_order': [], // sales_order_id is SERIAL
+            'purchase_order': [], // purchase_order_id is SERIAL
+            'investor': ['investor_name'], // investor_id is SERIAL, but name is required
+            'investment': ['investor_id'], // investment_id is SERIAL, but investor_id FK required
+            'product_category': ['category_name'], // category_id is SERIAL, but name is required
+            'product_brand': ['brand_name'] // brand_id is SERIAL, but name is required
         };
 
         const required = requiredFields[tableName] || [];
-        
+
         for (const field of required) {
             if (!doc[field]) {
-                console.warn(`Document missing required field '${field}' for table ${tableName}`);
+                console.warn(`Document missing required field '${field}' for table ${tableName}`, {
+                    table: tableName,
+                    field: field,
+                    availableFields: Object.keys(doc)
+                });
                 return false;
             }
         }
@@ -1892,7 +2271,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
 
         const fields = keyFields[tableName] || ['id'];
         const values = fields.map(f => doc[f] || '').filter(Boolean);
-        
+
         return `${tableName}:${values.join('|')}`;
     }
 
@@ -1912,7 +2291,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 if (mapping.skip || !mapping.target_field) return;
 
                 const sourceValue = sourceDoc[mapping.source_field];
-                if (sourceValue === undefined || sourceValue === null) return;
+                if (sourceValue === undefined || sourceValue === null || sourceValue === '') return;
 
                 // Apply transformations based on target field type
                 let transformedValue = this.applyFieldTransformation(
@@ -1921,12 +2300,18 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                     mapping.transformation_needed
                 );
 
-                if (transformedValue !== null && transformedValue !== undefined) {
+                if (transformedValue !== null && transformedValue !== undefined && transformedValue !== '') {
                     transformedDoc[mapping.target_field] = transformedValue;
                 }
             });
 
-            // Generate IDs if needed
+            // Special handling for supplier and investor tables
+            // Extract email and phone from contact fields if they exist
+            if (mappingResult.primary_table === 'supplier' || mappingResult.primary_table === 'investor') {
+                this.enhanceContactFields(sourceDoc, transformedDoc, mappingResult.primary_table);
+            }
+
+            // Generate IDs if needed (only for non-SERIAL tables like product)
             this.generateRequiredIds(transformedDoc, mappingResult.primary_table);
 
             // Add timestamps
@@ -1934,19 +2319,172 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 transformedDoc.created_date = new Date().toISOString();
             }
 
-            // Validate that we have more than just business_id
+            // Validate that we have meaningful data beyond just business_id
             const fieldsCount = Object.keys(transformedDoc).length;
-            if (fieldsCount <= 1) {
-                console.warn('Transformed document only has business_id, skipping...');
+
+            // Validation rules based on table type
+            const nameFields = {
+                'supplier': 'supplier_name',
+                'investor': 'investor_name',
+                'customer': 'customer_name',
+                'product_category': 'category_name',
+                'product_brand': 'brand_name',
+                'product': 'product_name'
+            };
+
+            const requiredNameField = nameFields[mappingResult.primary_table];
+
+            // For tables with name fields, require at least business_id + name field
+            if (requiredNameField && !transformedDoc[requiredNameField]) {
+                console.warn(`Transformed document missing required name field: ${requiredNameField}`, {
+                    table: mappingResult.primary_table,
+                    fields: Object.keys(transformedDoc),
+                    sourceFields: Object.keys(sourceDoc).slice(0, 5)
+                });
                 return null;
             }
 
-            console.log(`Transformed document has ${fieldsCount} fields`);
+            // For tables without specific name requirements, ensure we have at least 2 fields (business_id + one data field)
+            if (fieldsCount < 2) {
+                console.warn(`Transformed document only has ${fieldsCount} fields, likely incomplete mapping`, {
+                    table: mappingResult.primary_table,
+                    fields: Object.keys(transformedDoc),
+                    sourceFields: Object.keys(sourceDoc).slice(0, 5)
+                });
+                return null;
+            }
+
+            console.log(`Transformed document has ${fieldsCount} fields for ${mappingResult.primary_table}`);
             return transformedDoc;
 
         } catch (error) {
             console.error('Error transforming document:', error, sourceDoc);
             return null;
+        }
+    }
+
+    /**
+     * Enhance contact fields for supplier and investor tables
+     * Extracts email, phone, and contact_person from various source fields
+     */
+    enhanceContactFields(sourceDoc, transformedDoc, tableName) {
+        // Common field names that might contain contact information
+        const contactFieldNames = [
+            'Contact', 'contact', 'MainContact', 'main_contact',
+            'Contact Person', 'contact_person', 'ContactPerson',
+            'PrimaryContact', 'primary_contact',
+            'Email', 'email', 'EmailAddr', 'email_addr', 'ContactEmail', 'contact_email',
+            'Phone', 'phone', 'Tel', 'tel', 'Telephone', 'TelephoneNumber', 'telephone_number'
+        ];
+
+        const nameFieldNames = [
+            'Vendor', 'vendor', 'VendorID', 'vendor_id',
+            'Supplier', 'supplier', 'SupplierName', 'supplier_name',
+            'CompanyName', 'company_name', 'Company',
+            'Investor', 'investor', 'InvestorCode', 'investor_code',
+            'InvestorFullName', 'investor_full_name',
+            'FullName', 'full_name', 'Name', 'name',
+            'Vendor Name', 'Supplier Name', 'Investor Name'
+        ];
+
+        // Extract name if not already set
+        const nameField = tableName === 'supplier' ? 'supplier_name' : 'investor_name';
+        if (!transformedDoc[nameField]) {
+            for (const fieldName of nameFieldNames) {
+                if (sourceDoc[fieldName]) {
+                    const value = String(sourceDoc[fieldName]).trim();
+                    // Skip if it's an ID-like field (numbers, codes, etc.)
+                    if (value && !(/^[A-Z0-9\-]+$/i.test(value) && value.length < 10)) {
+                        transformedDoc[nameField] = value;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Extract contact information
+        for (const fieldName of contactFieldNames) {
+            if (!sourceDoc[fieldName]) continue;
+
+            const value = String(sourceDoc[fieldName]).trim();
+
+            // Check if it's an email
+            if (this.isEmailLike(value) && !transformedDoc.email) {
+                transformedDoc.email = value.toLowerCase();
+            }
+            // Check if it's a phone number
+            else if (this.isPhoneLike(value) && !transformedDoc.phone) {
+                transformedDoc.phone = this.cleanPhoneNumber(value);
+            }
+            // Otherwise, it's a contact person name
+            else if (!transformedDoc.contact_person && !this.isEmailLike(value) && !this.isPhoneLike(value)) {
+                transformedDoc.contact_person = value;
+            }
+        }
+
+        // Extract address if not already set
+        if (!transformedDoc.address) {
+            const addressFields = [
+                'Address', 'address', 'FullAddress', 'full_address',
+                'Location', 'location', 'Office Address', 'office_address',
+                'OfficeAddress', 'CompanyAddress', 'company_address'
+            ];
+            for (const fieldName of addressFields) {
+                if (sourceDoc[fieldName]) {
+                    transformedDoc.address = String(sourceDoc[fieldName]).trim();
+                    break;
+                }
+            }
+        }
+
+        // For investors, extract additional fields
+        if (tableName === 'investor') {
+            // Extract investment date
+            if (!transformedDoc.initial_investment_date) {
+                const dateFields = [
+                    'Initial Investment Date', 'initial_investment_date', 'InitialInvestmentDate',
+                    'FirstInvestmentDate', 'first_investment_date',
+                    'Investment Date', 'investment_date', 'InvestmentDate',
+                    'Start Date', 'start_date', 'StartDate',
+                    'Date', 'date'
+                ];
+                for (const fieldName of dateFields) {
+                    if (sourceDoc[fieldName]) {
+                        transformedDoc.initial_investment_date = this.parseDateValue(sourceDoc[fieldName]);
+                        break;
+                    }
+                }
+            }
+
+            // Extract investment terms
+            if (!transformedDoc.investment_terms) {
+                const termsFields = [
+                    'Investment Terms', 'investment_terms', 'InvestmentTerms',
+                    'Terms', 'terms', 'TermsAndConditions', 'terms_and_conditions',
+                    'Agreement', 'agreement', 'Contract', 'contract'
+                ];
+                for (const fieldName of termsFields) {
+                    if (sourceDoc[fieldName]) {
+                        transformedDoc.investment_terms = String(sourceDoc[fieldName]).trim();
+                        break;
+                    }
+                }
+            }
+
+            // Extract status
+            if (!transformedDoc.status) {
+                const statusFields = [
+                    'Status', 'status', 'CurrentStatus', 'current_status',
+                    'Active', 'active', 'ActiveStatus', 'active_status',
+                    'State', 'state'
+                ];
+                for (const fieldName of statusFields) {
+                    if (sourceDoc[fieldName]) {
+                        transformedDoc.status = String(sourceDoc[fieldName]).trim();
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -1957,15 +2495,27 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
         try {
             let transformedValue = value;
 
+            // Handle null/undefined/empty values
+            if (value === null || value === undefined || value === '') {
+                return null;
+            }
+
             // Convert to string for processing
             const stringValue = String(value).trim();
+
+            // Skip empty string values
+            if (stringValue === '' || stringValue === 'undefined' || stringValue === 'null') {
+                return null;
+            }
 
             // Handle different field types
             if (targetField.includes('_id') && targetField !== 'business_id') {
                 // Generate or extract IDs
                 transformedValue = this.generateIdFromValue(stringValue);
             } else if (targetField.includes('price') || targetField.includes('amount') ||
-                targetField.includes('cost') || targetField.includes('total')) {
+                targetField.includes('cost') || targetField.includes('total') ||
+                targetField.includes('investment') || targetField.includes('capital') ||
+                targetField.includes('roi') || targetField.includes('returned') || targetField.includes('paid')) {
                 // Handle monetary fields
                 transformedValue = this.parseMonetaryValue(stringValue);
             } else if (targetField.includes('date')) {
@@ -1973,13 +2523,22 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 transformedValue = this.parseDateValue(stringValue);
             } else if (targetField.includes('email')) {
                 // Validate email
-                transformedValue = this.isEmailLike(stringValue) ? stringValue.toLowerCase() : null;
-            } else if (targetField.includes('phone')) {
+                transformedValue = this.isEmailLike(stringValue) ? stringValue.toLowerCase() : stringValue;
+            } else if (targetField.includes('phone') || targetField === 'phone') {
                 // Clean phone number
                 transformedValue = this.cleanPhoneNumber(stringValue);
             } else if (targetField.includes('quantity')) {
                 // Handle quantity fields
                 transformedValue = this.parseNumericValue(stringValue);
+            } else if (targetField.includes('address') || targetField.includes('_name') ||
+                targetField.includes('description') || targetField.includes('notes') ||
+                targetField.includes('terms') || targetField.includes('status') ||
+                targetField.includes('person') || targetField.includes('contact')) {
+                // Handle text fields - preserve as-is but trimmed
+                transformedValue = stringValue;
+            } else {
+                // Default: preserve value as-is
+                transformedValue = stringValue;
             }
 
             return transformedValue;
@@ -2003,7 +2562,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
             // If too large, hash it to get a smaller value
             console.warn(`⚠️  ID value ${numValue} exceeds PostgreSQL INTEGER range, generating hash`);
         }
-        
+
         // Generate hash-based ID for non-numeric values or out-of-range numbers
         let hash = 0;
         const str = String(value);
@@ -2012,7 +2571,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
             hash = ((hash << 5) - hash) + char;
             hash = hash & hash; // Convert to 32bit integer
         }
-        
+
         // Ensure positive and within safe range
         const result = Math.abs(hash) % 2147483647;
         return result;
@@ -2059,32 +2618,37 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
 
     /**
      * Generate required IDs for tables
+     * IMPORTANT: Only generate IDs for tables that don't use SERIAL auto-increment
      */
     generateRequiredIds(doc, tableName) {
+        // Tables that use SERIAL (auto-increment) in database - DO NOT generate IDs
+        const autoIncrementTables = [
+            'supplier',        // supplier_id is SERIAL
+            'customer',        // customer_id is SERIAL
+            'investor',        // investor_id is SERIAL
+            'investment',      // investment_id is SERIAL
+            'investors_capital', // capital_id is SERIAL
+            'product_category', // category_id is SERIAL
+            'product_brand',    // brand_id is SERIAL
+            'purchase_order',   // purchase_order_id is SERIAL (assumed)
+            'sales_order'       // sales_order_id is SERIAL (assumed)
+        ];
+
+        // Only generate IDs for tables that need client-side ID generation
         const primaryKeys = {
-            'product_category': 'category_id',
-            'product_brand': 'brand_id',
-            'supplier': 'supplier_id',
-            'customer': 'customer_id',
-            'investor': 'investor_id',
-            'investment': 'investment_id',
-            'investors_capital': 'capital_id',
-            'product': 'product_id',
-            'purchase_order': 'purchase_order_id',
-            'sales_order': 'sales_order_id'
+            'product': 'product_id', // VARCHAR type - needs generation
         };
+
+        // Don't generate IDs for auto-increment tables
+        if (autoIncrementTables.includes(tableName)) {
+            return; // Let database handle ID generation
+        }
 
         const primaryKey = primaryKeys[tableName];
         if (primaryKey && !doc[primaryKey]) {
             if (primaryKey === 'product_id') {
                 // Generate string ID for products (VARCHAR type)
                 doc[primaryKey] = `PROD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            } else {
-                // Generate numeric ID for others (within INTEGER range)
-                // Use a counter-based approach instead of timestamp to avoid overflow
-                const baseId = Math.floor(Math.random() * 1000000); // 1-1,000,000 range
-                const randomSuffix = Math.floor(Math.random() * 1000);
-                doc[primaryKey] = baseId + randomSuffix;
             }
         }
     }
@@ -2094,7 +2658,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
      */
     async processBusinessData(businessId) {
         const startTime = Date.now();
-        
+
         // Reset progress
         this.progress = {
             stage: 'Initialization',
@@ -2103,7 +2667,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
             details: {},
             logs: []
         };
-        
+
         try {
             this.log('info', '═══════════════════════════════════════════════════════════════════════════════');
             this.log('info', 'DATA TRANSFORMATION PIPELINE STARTED', {
@@ -2114,7 +2678,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
 
             // Get all MongoDB collections for this business
             this.updateProgress('Initialization', 'Discovering collections', 5);
-            
+
             const db = mongoose.connection.db;
             const collections = await db.listCollections({
                 name: new RegExp(`^${businessId}_`)
@@ -2137,7 +2701,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 const collectionInfo = collections[i];
                 const collectionStartTime = Date.now();
                 const collectionProgress = ((i / collections.length) * 85) + 10; // 10-95% for collections
-                
+
                 try {
                     this.log('info', '───────────────────────────────────────────────────────────────────────────────');
                     this.log('info', `PROCESSING COLLECTION ${i + 1}/${collections.length}`, {
@@ -2148,14 +2712,14 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
 
                     // 1. Analyze collection structure
                     this.updateProgress(
-                        `Collection ${i + 1}/${collections.length}`, 
-                        'Step 1/3: Analyzing structure', 
+                        `Collection ${i + 1}/${collections.length}`,
+                        'Step 1/3: Analyzing structure',
                         collectionProgress,
                         { collection: collectionInfo.name }
                     );
-                    
+
                     const analysis = await this.analyzeCollectionStructure(businessId, collectionInfo.name);
-                    
+
                     this.log('data', 'Analysis Summary', {
                         documents: analysis.totalDocuments,
                         fields: analysis.fields.length,
@@ -2164,14 +2728,14 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
 
                     // 2. Use LLM to determine mapping
                     this.updateProgress(
-                        `Collection ${i + 1}/${collections.length}`, 
-                        'Step 2/3: Determining mappings with LLM', 
+                        `Collection ${i + 1}/${collections.length}`,
+                        'Step 2/3: Determining mappings with LLM',
                         collectionProgress + 5,
                         { collection: collectionInfo.name }
                     );
-                    
+
                     const mapping = await this.determineTableMapping(analysis);
-                    
+
                     this.log('data', 'Mapping Summary', {
                         targetTables: mapping.tables.map(t => t.table_name).join(', '),
                         tablesCount: mapping.tables.length,
@@ -2180,16 +2744,16 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
 
                     // 3. Migrate data to Supabase
                     this.updateProgress(
-                        `Collection ${i + 1}/${collections.length}`, 
-                        'Step 3/3: Migrating data to database', 
+                        `Collection ${i + 1}/${collections.length}`,
+                        'Step 3/3: Migrating data to database',
                         collectionProgress + 10,
                         { collection: collectionInfo.name }
                     );
-                    
+
                     const migration = await this.migrateDataToSupabase(businessId, collectionInfo.name, mapping);
-                    
+
                     const collectionTime = ((Date.now() - collectionStartTime) / 1000).toFixed(2);
-                    
+
                     // Calculate totals
                     const collectionInserted = migration.reduce((sum, m) => sum + (m.insertedCount || 0), 0);
                     totalRecordsProcessed += analysis.totalDocuments;
@@ -2219,7 +2783,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                         error: collectionError.message,
                         stack: collectionError.stack
                     });
-                    
+
                     results.push({
                         collection: collectionInfo.name,
                         error: collectionError.message,
@@ -2232,8 +2796,8 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
             const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
             const successCount = results.filter(r => r.success).length;
             const failedCount = results.filter(r => !r.success).length;
-            const successRate = totalRecordsProcessed > 0 
-                ? ((totalRecordsInserted / totalRecordsProcessed) * 100).toFixed(1) 
+            const successRate = totalRecordsProcessed > 0
+                ? ((totalRecordsInserted / totalRecordsProcessed) * 100).toFixed(1)
                 : 0;
 
             this.updateProgress('Complete', 'Pipeline finished', 100, {
@@ -2289,7 +2853,7 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                 error: error.message,
                 stack: error.stack
             });
-            
+
             throw error;
         }
     }

@@ -1,26 +1,26 @@
-Item ID, Item name                    , Type            , Price, Stock, Status   , Notes
-ITM001 , Wireless Bluetooth Headphones, Electronics     , 79.99,    45, In stock , Popular model with noise cancellation
-ITM002 , Smartphone Case - iPhone 13  , Electronics     , 19.99,   120, In stock , Protective silicone case
-ITM003 , Cotton T-Shirt - Blue        , Clothing        , 14.99,    85, In stock , 100% cotton                             , size M
-ITM004 , Stainless Steel Water Bottle , Home & Garden   , 24.99,    60, In stock , Insulated                               , 500ml capacity
-ITM005 , Yoga Mat                     , Sports & Fitness, 29.99,    35, In stock , Non-slip surface                        , 6mm thick
-ITM006 , Paperback Novel - Mystery    , Books           , 12.99,    75, In stock , Bestseller by local author
-ITM007 , LED Desk Lamp                , Electronics     , 39.99,    28, In stock , Adjustable brightness                   , USB powered
-ITM008 , Denim Jeans - Slim Fit       , Clothing        , 49.99,    42, In stock , Dark wash                               , size 32x32
-ITM009 , Ceramic Plant Pot            , Home & Garden   , 16.99,    90, In stock , 8-inch diameter                         , drainage hole
-ITM010 , Dumbbells Set - 5kg          , Sports & Fitness, 34.99,    15, Low stock, Pair of adjustable weights
-ITM011 , Hardcover Cookbook           , Books           , 22.99,    55, In stock , Vegetarian recipes collection
-ITM012 , Wireless Mouse               , Electronics     , 25.99,    68, In stock , Ergonomic design                        , 2.4GHz
-ITM013 , Wool Sweater                 , Clothing        , 59.99,    30, In stock , Warm winter knit                        , size L
-ITM014 , Garden Hose - 50ft           , Home & Garden   , 31.99,    22, In stock , Heavy-duty rubber                       , kink-resistant
-ITM015 , Resistance Bands Set         , Sports & Fitness, 19.99,    40, In stock , 5 bands with different resistance levels
-ITM016 , Science Fiction Novel        , Books           , 15.99,    62, In stock , Space opera series book 3
-ITM017 , Bluetooth Speaker            , Electronics     , 49.99,    38, In stock , Waterproof                              , 12-hour battery
-ITM018 , Cotton Hoodie                , Clothing        , 39.99,    50, In stock , Pullover style                          , unisex
-ITM019 , Indoor Herb Garden Kit       , Home & Garden   , 44.99,    18, Low stock, Grow basil                              , mint              , and parsley
-ITM020 , Tennis Racket                , Sports & Fitness, 89.99,    12, Low stock, Beginner level                          , graphite composite
-ITM021 , Biography - Tech Entrepreneur, Books           , 18.99,    45, In stock , Inspiring story of success
-ITM022 , USB-C Cable                  , Electronics     ,  9.99,   150, In stock , Fast charging                           , 6ft length
-ITM023 , Running Shoes                , Clothing        , 79.99,    25, In stock , Breathable mesh                         , size 9
-ITM024 , Wall Clock - Modern          , Home & Garden   , 26.99,    33, In stock , Silent movement                         , black frame
-ITM025 , Yoga Block                   , Sports & Fitness, 12.99,    70, In stock , Foam material                           , 4-inch
+Item ID,Item name,Type,Price,Stock,Status,Notes
+ITM001,Wireless Bluetooth Headphones,Electronics,79.99,45,In stock,Popular model with noise cancellation
+ITM002,Smartphone Case - iPhone 13,Electronics,19.99,120,In stock,Protective silicone case
+ITM003,Cotton T-Shirt - Blue,Clothing,14.99,85,In stock,100% cotton,size M
+ITM004,Stainless Steel Water Bottle,Home & Garden,24.99,60,In stock,Insulated,500ml capacity
+ITM005,Yoga Mat,Sports & Fitness,29.99,35,In stock,Non-slip surface,6mm thick
+ITM006,Paperback Novel - Mystery,Books,12.99,75,In stock,Bestseller by local author
+ITM007,LED Desk Lamp,Electronics,39.99,28,In stock,Adjustable brightness,USB powered
+ITM008,Denim Jeans - Slim Fit,Clothing,49.99,42,In stock,Dark wash,size 32x32
+ITM009,Ceramic Plant Pot,Home & Garden,16.99,90,In stock,8-inch diameter,drainage hole
+ITM010,Dumbbells Set - 5kg,Sports & Fitness,34.99,15,Low stock,Pair of adjustable weights
+ITM011,Hardcover Cookbook,Books,22.99,55,In stock,Vegetarian recipes collection
+ITM012,Wireless Mouse,Electronics,25.99,68,In stock,Ergonomic design,2.4GHz
+ITM013,Wool Sweater,Clothing,59.99,30,In stock,Warm winter knit,size L
+ITM014,Garden Hose - 50ft,Home & Garden,31.99,22,In stock,Heavy-duty rubber,kink-resistant
+ITM015,Resistance Bands Set,Sports & Fitness,19.99,40,In stock,5 bands with different resistance levels
+ITM016,Science Fiction Novel,Books,15.99,62,In stock,Space opera series book 3
+ITM017,Bluetooth Speaker,Electronics,49.99,38,In stock,Waterproof,12-hour battery
+ITM018,Cotton Hoodie,Clothing,39.99,50,In stock,Pullover style,unisex
+ITM019,Indoor Herb Garden Kit,Home & Garden,44.99,18,Low stock,Grow basil,mint,and parsley
+ITM020,Tennis Racket,Sports & Fitness,89.99,12,Low stock,Beginner level,graphite composite
+ITM021,Biography - Tech Entrepreneur,Books,18.99,45,In stock,Inspiring story of success
+ITM022,USB-C Cable,Electronics,9.99,150,In stock,Fast charging,6ft length
+ITM023,Running Shoes,Clothing,79.99,25,In stock,Breathable mesh,size 9
+ITM024,Wall Clock - Modern,Home & Garden,26.99,33,In stock,Silent movement,black frame
+ITM025,Yoga Block,Sports & Fitness,12.99,70,In stock,Foam material,4-inch

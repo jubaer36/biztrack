@@ -1,0 +1,10 @@
+VendorID,CompanyName,PrimaryContact,ContactEmail,TelephoneNumber,FullAddress,PaymentTermsDescription,ActiveStatus,AccountNotes
+V-001,Apparel Distributors Inc,Jennifer Lopez,jlopez@appareldist.com,212-555-0101,"789 Fashion Ave, New York, NY 10018",30 days net,Yes,Reliable supplier since 2020
+V-002,Denim Suppliers Co,Robert Denim,rdenim@denimco.com,323-555-0202,"1234 Blue Jean Blvd, Los Angeles, CA 90015",45 days net,Yes,Best denim prices
+V-003,Fashion Forward LLC,Maria Trendy,maria@fashionforward.com,415-555-0303,"567 Style Street, San Francisco, CA 94102",Net 30,Yes,Premium fashion items
+V-004,Professional Attire Co,James Corporate,james.c@proattire.com,312-555-0404,"890 Business Park Dr, Chicago, IL 60601",60 days,Yes,Office wear specialist
+V-005,Seasonal Clothing Ltd,Susan Winters,swinters@seasonalwear.com,617-555-0505,"123 Seasonal Way, Boston, MA 02101",Net 30,Yes,
+V-006,Outerwear Specialists,Michael Storm,mstorm@outerwear.com,206-555-0606,"456 Jacket Lane, Seattle, WA 98101",30 days,Yes,Premium outerwear
+V-007,Footwear Plus,David Walker,dwalker@footwearplus.com,503-555-0707,"789 Shoe Street, Portland, OR 97201",Net 45,Yes,Wide shoe selection
+V-008,Accessories Warehouse,Emily Charm,echarm@accwarehouse.com,702-555-0808,"321 Accessory Ave, Las Vegas, NV 89101",15 days,Yes,Fast shipping
+V-009,Luxury Goods Supply,Richard Prestige,rprestige@luxurygoods.com,305-555-0909,"654 Premium Plaza, Miami, FL 33101",Net 60,Yes,High-end products

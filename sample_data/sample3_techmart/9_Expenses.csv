@@ -1,0 +1,29 @@
+Date,Expense Category,Description,Amount,Payment Method,Vendor,Status,Notes
+2024-01-05,Rent,Warehouse A monthly rent,15000,Bank Transfer,Property Management Inc,Paid,January rent
+2024-01-05,Rent,Warehouse B monthly rent,12000,Bank Transfer,Property Management Inc,Paid,January rent
+2024-01-05,Rent,Warehouse C monthly rent,8000,Bank Transfer,Property Management Inc,Paid,January rent
+2024-01-10,Utilities,Electricity - All warehouses,3500,Bank Transfer,City Power Company,Paid,January utilities
+2024-01-15,Salaries,Staff salaries,45000,Bank Transfer,Multiple,Paid,15 employees
+2024-01-20,Transportation,Delivery fleet fuel,2800,Corporate Card,Gas Stations,Paid,January fuel
+2024-01-25,Marketing,Online advertising,5000,Credit Card,Google Ads,Paid,Digital marketing
+2024-01-30,Insurance,Business insurance premium,4200,Bank Transfer,Insurance Corp,Paid,Quarterly payment
+2024-02-05,Rent,All warehouses,35000,Bank Transfer,Property Management Inc,Paid,February rent
+2024-02-10,Utilities,Electricity and water,3800,Bank Transfer,City Utilities,Paid,February utilities
+2024-02-15,Salaries,Staff salaries,45000,Bank Transfer,Multiple,Paid,15 employees
+2024-02-20,Transportation,Delivery and logistics,3200,Corporate Card,Various,Paid,February transport
+2024-02-25,Office Supplies,Computers and equipment,8500,Corporate Card,Office Depot,Paid,New workstations
+2024-03-05,Rent,All warehouses,35000,Bank Transfer,Property Management Inc,Paid,March rent
+2024-03-10,Utilities,All utilities,4100,Bank Transfer,City Utilities,Paid,March utilities
+2024-03-15,Salaries,Staff salaries,47000,Bank Transfer,Multiple,Paid,16 employees - new hire
+2024-03-20,Transportation,Fleet maintenance,4500,Bank Transfer,Auto Service Center,Paid,Quarterly maintenance
+2024-03-25,Marketing,Trade show participation,12000,Credit Card,Event Organizers,Paid,Tech Expo 2024
+2024-04-05,Rent,All warehouses,35000,Bank Transfer,Property Management Inc,Paid,April rent
+2024-04-10,Utilities,All utilities,3900,Bank Transfer,City Utilities,Paid,April utilities
+2024-04-15,Salaries,Staff salaries,47000,Bank Transfer,Multiple,Paid,16 employees
+2024-04-20,Transportation,Delivery costs,2900,Corporate Card,Various,Paid,April transport
+2024-04-30,Insurance,Business insurance premium,4200,Bank Transfer,Insurance Corp,Paid,Quarterly payment
+2024-05-05,Rent,All warehouses,35000,Bank Transfer,Property Management Inc,Paid,May rent
+2024-05-10,Utilities,All utilities,4200,Bank Transfer,City Utilities,Paid,May utilities
+2024-05-15,Salaries,Staff salaries,47000,Bank Transfer,Multiple,Paid,16 employees
+2024-05-20,IT Services,Cloud hosting and software,6500,Credit Card,Tech Services Inc,Paid,Annual subscription
+2024-05-25,Marketing,Social media campaigns,4500,Credit Card,Marketing Agency,Paid,May campaigns

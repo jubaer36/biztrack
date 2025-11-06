@@ -1,0 +1,21 @@
+Product No., Item Name         , Type       , Brand  , Stock, Unit Cost, Selling Price, Supplier          , Location   , Status
+P001       , iPhone 15 Pro     , Smartphones, Apple  ,    45,       950,          1299, TechSupply Co     , Warehouse A, In Stock
+P002       , iPhone 15         , Smartphones, Apple  ,    67,       750,           999, TechSupply Co     , Warehouse A, In Stock
+P003       , Galaxy S24 Ultra  , Smartphones, Samsung,    38,       880,          1199, Global Electronics, Warehouse A, In Stock
+P004       , Galaxy S24        , Smartphones, Samsung,    52,       620,           849, Global Electronics, Warehouse A, In Stock
+P005       , MacBook Pro 16    , Laptops    , Apple  ,    23,      2100,          2799, TechSupply Co     , Warehouse B, In Stock
+P006       , MacBook Air 13    , Laptops    , Apple  ,    31,       980,          1299, TechSupply Co     , Warehouse B, In Stock
+P007       , Dell XPS 15       , Laptops    , Dell   ,    28,      1350,          1799, Dell Direct       , Warehouse B, In Stock
+P008       , ThinkPad X1 Carbon, Laptops    , Lenovo ,    19,      1180,          1599, Lenovo Partner    , Warehouse B, In Stock
+P009       , iPad Pro 12.9     , Tablets    , Apple  ,    42,       880,          1199, TechSupply Co     , Warehouse A, In Stock
+P010       , iPad Air          , Tablets    , Apple  ,    56,       520,           699, TechSupply Co     , Warehouse A, In Stock
+P011       , Galaxy Tab S9     , Tablets    , Samsung,    34,       450,           599, Global Electronics, Warehouse A, In Stock
+P012       , AirPods Pro       , Headphones , Apple  ,   120,       180,           249, TechSupply Co     , Warehouse C, In Stock
+P013       , Sony WH-1000XM5   , Headphones , Sony   ,    45,       280,           399, Audio Partners    , Warehouse C, In Stock
+P014       , Bose QC45         , Headphones , Bose   ,    38,       250,           349, Audio Partners    , Warehouse C, In Stock
+P015       , Magic Keyboard    , Accessories, Apple  ,    85,        90,           129, TechSupply Co     , Warehouse C, In Stock
+P016       , Magic Mouse       , Accessories, Apple  ,    95,        65,            99, TechSupply Co     , Warehouse C, In Stock
+P017       , USB-C Hub         , Accessories, Anker  ,   150,        25,            49, SmallTech Supply  , Warehouse C, In Stock
+P018       , Wireless Charger  , Accessories, Belkin ,   180,        20,            39, SmallTech Supply  , Warehouse C, In Stock
+P019       , 27 4K Monitor     , Monitors   , LG     ,    22,       380,           549, Display Tech      , Warehouse B, In Stock
+P020       , 34 Ultrawide      , Monitors   , Samsung,    15,       620,           899, Global Electronics, Warehouse B, In Stock
