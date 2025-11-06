@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ForecastChart } from "@/components/ForecastChart";
 
 interface Business { id: string; name: string; description?: string | null }
 interface ForecastItem {
@@ -34,6 +33,9 @@ interface AiInsightsPayload {
 	notes?: string[];
 }
 
+interface ContextHoliday { date: string; name: string }
+interface ContextWeather { date: string; weather: string }
+
 type WindowKey = '7' | '15' | '30' | 'all';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
@@ -44,18 +46,21 @@ export default function ForecastPage() {
 
 	const [businesses, setBusinesses] = useState<Business[]>([]);
 	const [selectedBusiness, setSelectedBusiness] = useState<string>("");
-	const [forecast, setForecast] = useState<ForecastItem[]>([]);
-	const [pageLoading, setPageLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
+
+	const [aiLoading, setAiLoading] = useState<boolean>(false);
+	const [aiError, setAiError] = useState<string | null>(null);
+	const [aiInsights, setAiInsights] = useState<AiInsightsPayload | null>(null);
+
+	const [ctxLoading, setCtxLoading] = useState<boolean>(false);
+	const [ctxError, setCtxError] = useState<string | null>(null);
+	const [ctxHolidays, setCtxHolidays] = useState<ContextHoliday[]>([]);
+	const [ctxWeather, setCtxWeather] = useState<ContextWeather[]>([]);
 
 	const [topWindow, setTopWindow] = useState<WindowKey>('7');
 	const [topLoading, setTopLoading] = useState<boolean>(false);
 	const [topError, setTopError] = useState<string | null>(null);
 	const [topProducts, setTopProducts] = useState<TopProductItem[]>([]);
-
-	const [aiLoading, setAiLoading] = useState<boolean>(false);
-	const [aiError, setAiError] = useState<string | null>(null);
-	const [aiInsights, setAiInsights] = useState<AiInsightsPayload | null>(null);
 
 	useEffect(() => {
 		if (!loading && !user) router.push("/auth/login");
@@ -78,33 +83,45 @@ export default function ForecastPage() {
 		loadBusinesses();
 	}, []);
 
+	// Auto-fetch context (7 days) for weather; fetch all holidays for current year
 	useEffect(() => {
-		const loadForecast = async () => {
+		const loadContext = async () => {
 			if (!selectedBusiness) return;
 			try {
-				setPageLoading(true);
-				setError(null);
+				setCtxLoading(true);
+				setCtxError(null);
 				const token = localStorage.getItem("access_token");
-				const resp = await fetch(`${API_BASE}/forecast/generate/${selectedBusiness}`, {
+				// Weather week via context
+				const resp = await fetch(`${API_BASE}/forecast/context/${selectedBusiness}?window=7`, {
 					headers: { Authorization: `Bearer ${token}` },
 				});
-				if (!resp.ok) {
-					const e = await resp.json().catch(() => ({}));
-					throw new Error(e.error || "Failed to load forecast");
+				if (resp.ok) {
+					const data = await resp.json();
+					setCtxWeather((data.weather || []).slice(0, 7));
 				}
-				const data = await resp.json();
-				setForecast(data.forecast || []);
+				// All holidays this year
+				const year = new Date().getFullYear();
+				const hResp = await fetch(`${API_BASE}/forecast/holidays/${selectedBusiness}?year=${year}`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				if (!hResp.ok) {
+					const e = await hResp.json().catch(() => ({}));
+					throw new Error(e.error || "Failed to load holidays");
+				}
+				const hData = await hResp.json();
+				setCtxHolidays(hData.holidays || []);
 			} catch (e: any) {
-				setError(e.message || "Failed to load forecast");
+				setCtxError(e.message || "Failed to load context");
 			} finally {
-				setPageLoading(false);
+				setCtxLoading(false);
 			}
 		};
-		loadForecast();
+		loadContext();
 	}, [selectedBusiness]);
 
+	// Fetch trending products for selected window
 	useEffect(() => {
-		const loadTopProducts = async () => {
+		const loadTrending = async () => {
 			if (!selectedBusiness) return;
 			try {
 				setTopLoading(true);
@@ -115,28 +132,18 @@ export default function ForecastPage() {
 				});
 				if (!resp.ok) {
 					const e = await resp.json().catch(() => ({}));
-					throw new Error(e.error || "Failed to load top products");
+					throw new Error(e.error || "Failed to load trending products");
 				}
 				const data = await resp.json();
 				setTopProducts(data.products || []);
 			} catch (e: any) {
-				setTopError(e.message || "Failed to load top products");
+				setTopError(e.message || "Failed to load trending products");
 			} finally {
 				setTopLoading(false);
 			}
 		};
-		loadTopProducts();
+		loadTrending();
 	}, [selectedBusiness, topWindow]);
-
-	const chartData = useMemo(() => {
-		if (!forecast?.length) return [{ month: "Next", forecast: 0 }];
-		// Show top 6 products; use product name as x-axis label
-		return forecast.slice(0, 6).map((f) => ({
-			month: f.product_name || f.product_id,
-			forecast: f.demand_forecast_units,
-			confidence: typeof f.confidence_score === 'number' ? `${Math.round(f.confidence_score * 100)}%` : undefined,
-		}));
-	}, [forecast]);
 
 	const handleGenerateAi = async () => {
 		if (!selectedBusiness) return;
@@ -145,23 +152,22 @@ export default function ForecastPage() {
 			setAiError(null);
 			setAiInsights(null);
 			const token = localStorage.getItem("access_token");
-			const windowParam = topWindow === 'all' ? '30' : topWindow;
-
-			// 1) Fetch legit holidays and weather for Bangladesh (and optional coords later)
-			const ctxResp = await fetch(`${API_BASE}/forecast/context/${selectedBusiness}?window=${windowParam}`, {
-				headers: { Authorization: `Bearer ${token}` }
-			});
-			if (!ctxResp.ok) {
-				const e = await ctxResp.json().catch(() => ({}));
-				throw new Error(e.error || 'Failed to load forecasting context');
+			// Reuse context fetched above; if empty, fetch on-demand
+			let holidays = ctxHolidays;
+			let weather = ctxWeather;
+			if (!holidays.length || !weather.length) {
+				const ctxResp = await fetch(`${API_BASE}/forecast/context/${selectedBusiness}?window=15`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				const ctx = await ctxResp.json().catch(() => ({}));
+				holidays = ctx.holidays || holidays;
+				weather = ctx.weather || weather;
 			}
-			const ctx = await ctxResp.json();
 
-			// 2) Call AI endpoint with fetched holidays and weather
 			const resp = await fetch(`${API_BASE}/forecast/ai/${selectedBusiness}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ window: windowParam, holidays: ctx.holidays || [], weather: ctx.weather || [] })
+				body: JSON.stringify({ window: '15', holidays, weather })
 			});
 			if (!resp.ok) {
 				const e = await resp.json().catch(() => ({}));
@@ -182,7 +188,7 @@ export default function ForecastPage() {
 				<div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
 					<div>
 						<h1 className="text-2xl font-bold text-foreground">Demand Forecasting</h1>
-						<p className="text-sm text-muted-foreground">AI predictions per product for the next period</p>
+						<p className="text-sm text-muted-foreground">AI-driven demand heads-up with holidays and weather</p>
 					</div>
 					<div>
 						<select
@@ -203,41 +209,66 @@ export default function ForecastPage() {
 					<div className="text-sm text-red-600 border border-red-200 bg-red-50 rounded p-3">{error}</div>
 				)}
 
-				<Card>
-					<CardHeader>
-						<CardTitle>Next Period Forecast</CardTitle>
-						<CardDescription>Top products by expected units</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<ForecastChart data={chartData} />
-						<div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-							{forecast.slice(0, 12).map((f) => (
-								<div key={f.product_id} className="p-4 rounded-lg border border-border bg-card/50">
-									<div className="flex items-center justify-between">
-										<div>
-											<div className="font-medium truncate max-w-[220px]" title={f.product_name}>{f.product_name}</div>
-											<div className="text-xs text-muted-foreground">ID: {f.product_id}</div>
-										</div>
-										<div className="text-right">
-											<div className="text-xl font-bold">{f.demand_forecast_units.toLocaleString()} units</div>
-											{typeof f.confidence_score === 'number' && (
-												<div className="text-xs text-muted-foreground">Confidence: {Math.round(f.confidence_score * 100)}%</div>
-											)}
-										</div>
+				{/* Context panels */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<Card>
+						<CardHeader>
+							<CardTitle>All Holidays ({new Date().getFullYear()})</CardTitle>
+							<CardDescription>Bangladesh holidays this year</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{ctxError && <div className="text-xs text-red-600 mb-3">{ctxError}</div>}
+							<div className="space-y-2 max-h-[360px] overflow-auto pr-1">
+								{(ctxHolidays || []).map((h, idx) => (
+									<div key={`${h.date}-${idx}`} className="flex items-center justify-between border border-border rounded-md px-3 py-2 bg-card/50">
+										<div className="font-medium">{h.name}</div>
+										<div className="text-sm text-muted-foreground">{h.date}</div>
 									</div>
-								</div>
-							))}
-							{!forecast.length && !pageLoading && (
-								<div className="text-sm text-muted-foreground">No forecast yet. Upload and map data first.</div>
-							)}
-						</div>
-					</CardContent>
-				</Card>
+								))}
+								{!ctxLoading && (!ctxHolidays || ctxHolidays.length === 0) && (
+									<div className="text-sm text-muted-foreground">No holidays found.</div>
+								)}
+							</div>
+						</CardContent>
+					</Card>
 
+					<Card>
+						<CardHeader>
+							<CardTitle>This Week's Weather</CardTitle>
+							<CardDescription>Daily summary for next 7 days</CardDescription>
+						</CardHeader>
+						<CardContent>
+							{ctxError && <div className="text-xs text-red-600 mb-3">{ctxError}</div>}
+							<div className="overflow-x-auto border border-border rounded-lg">
+								<table className="w-full text-sm">
+									<thead className="bg-muted/50">
+										<tr>
+											<th className="text-left p-3 font-medium">Date</th>
+											<th className="text-left p-3 font-medium">Weather</th>
+										</tr>
+									</thead>
+									<tbody>
+										{(ctxWeather || []).slice(0,7).map((w) => (
+											<tr key={w.date} className="border-t border-border">
+												<td className="p-3">{w.date}</td>
+												<td className="p-3">{w.weather}</td>
+											</tr>
+										))}
+										{!ctxLoading && (!ctxWeather || ctxWeather.length === 0) && (
+											<tr><td className="p-3 text-muted-foreground" colSpan={2}>No weather data.</td></tr>
+										)}
+									</tbody>
+								</table>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+
+				{/* Trending products */}
 				<Card>
 					<CardHeader>
-						<CardTitle>Top Selling Products</CardTitle>
-						<CardDescription>7 / 15 / 30 days and all-time selling trends</CardDescription>
+						<CardTitle>Trending Products</CardTitle>
+						<CardDescription>Top sellers by units in 7 / 15 / 30 days or All time</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<div className="flex gap-2 mb-4">
@@ -287,10 +318,11 @@ export default function ForecastPage() {
 					</CardContent>
 				</Card>
 
+				{/* AI Insights */}
 				<Card>
 					<CardHeader>
 						<CardTitle>AI Insights</CardTitle>
-						<CardDescription>Demand heads-up using holidays and weather context</CardDescription>
+						<CardDescription>Demand heads-up using holidays and weather</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<div className="flex items-center gap-3 mb-4">
@@ -299,9 +331,9 @@ export default function ForecastPage() {
 								disabled={aiLoading || !selectedBusiness}
 								className={`px-4 py-2 rounded-md border ${aiLoading ? 'opacity-70 cursor-not-allowed' : ''} bg-primary text-primary-foreground border-primary`}
 							>
-								{aiLoading ? 'Generating…' : `Generate AI for ${topWindow === 'all' ? '30' : topWindow} days`}
+								{aiLoading ? 'Generating…' : 'Generate AI'}
 							</button>
-							<span className="text-xs text-muted-foreground">Uses BD public holidays and local weather</span>
+							<span className="text-xs text-muted-foreground">Uses BD holidays and local weather</span>
 						</div>
 
 						{aiError && (

@@ -11,6 +11,20 @@ function monthKey(dateStr) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// Fallback Bangladesh holidays (common annual holidays)
+function getBangladeshHolidaysFallback(year) {
+    return [
+        { date: `${year}-02-21`, name: "International Mother Language Day", public: true },
+        { date: `${year}-03-17`, name: "Mujib's Birthday", public: true },
+        { date: `${year}-03-26`, name: "Independence Day", public: true },
+        { date: `${year}-04-14`, name: "Bengali New Year (Pohela Boishakh)", public: true },
+        { date: `${year}-05-01`, name: "May Day", public: true },
+        { date: `${year}-08-15`, name: "National Mourning Day", public: true },
+        { date: `${year}-12-16`, name: "Victory Day", public: true },
+        { date: `${year}-12-25`, name: "Christmas Day", public: false }
+    ];
+}
+
 function mapOpenMeteoCodeToText(code) {
     const m = {
         0: 'Clear sky',
@@ -78,19 +92,19 @@ const groq = axios.create({
     }
 });
 
-// GET /api/forecast/context/:businessId?window=7|15|30&lat=...&lon=...&place_id=...
-// Returns standardized holidays (Bangladesh) and weather arrays for next N days
+// GET /api/forecast/context/:businessId?lat=...&lon=...&place_id=...
+// Returns:
+//   - holidays: upcoming 10 holidays (for display)
+//   - holidaysIn7Days: holidays within next 7 days (for AI forecasting)
+//   - weather: next 7 days weather forecast
+// Note: Free weather API only provides 7 days forecast
 router.get('/context/:businessId', authenticateUser, async (req, res) => {
     const { businessId } = req.params;
     const userId = req.user.id;
-    const windowParam = (req.query.window || '7').toString();
+    const windowParam = '7'; // Fixed to 7 days for free weather API
     const lat = req.query.lat ? Number(req.query.lat) : 23.8103; // Dhaka default
     const lon = req.query.lon ? Number(req.query.lon) : 90.4125;
     const placeId = (req.query.place_id || 'dhaka').toString();
-
-    if (!['7', '15', '30'].includes(windowParam)) {
-        return res.status(400).json({ error: "Invalid window. Use '7', '15', or '30'" });
-    }
 
     try {
         // Verify business ownership
@@ -105,92 +119,95 @@ router.get('/context/:businessId', authenticateUser, async (req, res) => {
             return res.status(403).json({ error: 'Access denied or business not found' });
         }
 
-        const days = Number(windowParam);
+        const days = 7; // Fixed to 7 days
         const now = new Date();
         const end = new Date();
-        end.setDate(end.getDate() - 1 + days); // inclusive window
+        end.setDate(end.getDate() + 6); // 7 days from today
 
-        // Holidays: Holiday API public holidays for Bangladesh (BD)
-        // Fetch for current and next year, then filter upcoming dates within window
+        // Holidays: Calendarific API for Bangladesh (BD)
+        // Fetch for current and next year, then merge and show upcoming holidays
         const year = now.getFullYear();
-        const holidayApiKey = process.env.HOLIDAY_API_KEY || '5cfbae4b-8364-4be9-a1e0-7c75e9b03c1f';
-        const urls = [
-            `https://holidayapi.com/v1/holidays?key=${holidayApiKey}&country=BD&year=${year}&public=true`,
-            `https://holidayapi.com/v1/holidays?key=${holidayApiKey}&country=BD&year=${year + 1}&public=true`
-        ];
+        const holidayApiKey = process.env.HOLIDAY_API_KEY;
+        const urls = holidayApiKey ? [
+            `https://calendarific.com/api/v2/holidays?api_key=${holidayApiKey}&country=BD&year=${year}`,
+            `https://calendarific.com/api/v2/holidays?api_key=${holidayApiKey}&country=BD&year=${year + 1}`
+        ] : [];
 
         let holidayData = [];
-        try {
-            const [resp1, resp2] = await Promise.all([
-                axios.get(urls[0]),
-                axios.get(urls[1])
-            ]);
-            const extract = (resp) => {
-                const h = resp?.data?.holidays;
-                if (Array.isArray(h)) return h;
-                if (h && typeof h === 'object') {
-                    return Object.values(h).flat();
-                }
-                return [];
-            };
-            holidayData = [...extract(resp1), ...extract(resp2)];
-        } catch (e) {
-            console.warn('[FORECAST CONTEXT] Holiday API error:', e?.message || e);
-            holidayData = [];
+        if (urls.length > 0) {
+            try {
+                const responses = await Promise.all(urls.map(url => axios.get(url)));
+                const extract = (resp) => {
+                    // Calendarific API returns holidays in response.holidays
+                    const h = resp?.data?.response?.holidays;
+                    if (Array.isArray(h)) {
+                        return h.map(holiday => ({
+                            date: holiday.date.iso,
+                            name: holiday.name,
+                            type: holiday.primary_type || 'Holiday',
+                            public: holiday.type?.includes('National holiday') || false
+                        }));
+                    }
+                    return [];
+                };
+                holidayData = responses.flatMap(extract);
+            } catch (e) {
+                const status = e?.response?.status;
+                console.warn('[FORECAST CONTEXT] Calendarific API error:', status, e?.message || e);
+
+                // Fallback to static Bangladesh holidays if API fails
+                console.log('[FORECAST CONTEXT] Using fallback Bangladesh holidays');
+                holidayData = [
+                    ...getBangladeshHolidaysFallback(year),
+                    ...getBangladeshHolidaysFallback(year + 1)
+                ];
+            }
+        } else {
+            // No API key, use fallback
+            console.log('[FORECAST CONTEXT] No Holiday API key, using fallback Bangladesh holidays');
+            holidayData = [
+                ...getBangladeshHolidaysFallback(year),
+                ...getBangladeshHolidaysFallback(year + 1)
+            ];
         }
 
-        let holidays = holidayData
-            .map(h => ({ date: h.date, name: h.name || h.localName || 'Holiday', countryCode: 'BD' }))
+        // Get all upcoming holidays (for display - up to 10)
+        const todayStart = new Date(now.toISOString().split('T')[0]); // Start of today
+        const allUpcomingHolidays = holidayData
             .filter(h => {
-                const d = new Date(h.date + 'T00:00:00Z');
-                return d >= new Date(now.toDateString()) && d <= end;
+                const holidayDate = new Date(h.date);
+                return holidayDate >= todayStart;
             })
-            .slice(0, 100);
+            .sort((a, b) => (a.date < b.date ? -1 : 1))
+            .slice(0, 10);
 
-        // Fallback: if no holidays in the strict window, include next 5 upcoming in the year
-        if (holidays.length === 0 && holidayData.length > 0) {
-            const upcoming = holidayData
-                .map(h => ({ date: h.date, name: h.name || h.localName || 'Holiday', countryCode: 'BD' }))
-                .filter(h => new Date(h.date + 'T00:00:00Z') >= new Date(now.toDateString()))
-                .sort((a, b) => (a.date < b.date ? -1 : 1))
-                .slice(0, 5);
-            holidays = upcoming;
-        }
+        // Get holidays within 7 days (for AI forecasting)
+        const sevenDaysEnd = new Date(todayStart);
+        sevenDaysEnd.setDate(sevenDaysEnd.getDate() + 7);
+
+        const holidaysIn7Days = holidayData
+            .filter(h => {
+                const holidayDate = new Date(h.date);
+                return holidayDate >= todayStart && holidayDate < sevenDaysEnd;
+            })
+            .sort((a, b) => (a.date < b.date ? -1 : 1));
 
         // Weather: Meteosource API using place_id
-        const meteosourceKey = process.env.METEOSOURCE_API_KEY || '';
+        // Accept multiple env var names to avoid casing mismatches
+        const meteosourceKey = process.env.WEATHER_API_KEY;
         let weather = [];
         if (meteosourceKey) {
             try {
-                const msUrl = `https://www.meteosource.com/api/v1/free/point?place_id=${encodeURIComponent(placeId)}&sections=all&timezone=UTC&language=en&units=metric&key=${encodeURIComponent(meteosourceKey)}`;
-                const w = await axios.get(msUrl);
+                const msUrl = `https://www.meteosource.com/api/v1/free/point?place_id=${encodeURIComponent(placeId)}&sections=daily&timezone=UTC&language=en&units=metric&key=${encodeURIComponent(meteosourceKey)}`;
+                const w = await axios.get(msUrl, { headers: { 'Accept-Encoding': 'gzip' } });
                 // Prefer daily if available, else derive from hourly/current
-                const daily = w.data?.daily?.data; // array with { day: 'YYYY-MM-DD', summary? or weather? }
+                const daily = w.data?.daily?.data;
                 if (Array.isArray(daily) && daily.length) {
-                    // Map next N days
                     const startDateStr = now.toISOString().slice(0, 10);
                     const endDateStr = end.toISOString().slice(0, 10);
                     weather = daily
                         .filter(d => d.day >= startDateStr && d.day <= endDateStr)
                         .map(d => ({ date: d.day, weather: d.summary || d.weather || '' }));
-                }
-                // Fallback to hourly if daily missing/empty
-                if (!weather.length && Array.isArray(w.data?.hourly?.data)) {
-                    const hourly = w.data.hourly.data; // [{ date: 'YYYY-MM-DDTHH:mm:ssZ', weather: '...' }]
-                    const byDate = new Map();
-                    for (const h of hourly) {
-                        const dStr = (h.date || '').slice(0, 10);
-                        if (!dStr) continue;
-                        if (!byDate.has(dStr)) byDate.set(dStr, new Set());
-                        if (h.weather) byDate.get(dStr).add(h.weather);
-                    }
-                    const dates = Array.from(byDate.keys()).sort();
-                    for (const dStr of dates) {
-                        if (new Date(dStr) < new Date(now.toDateString()) || new Date(dStr) > end) continue;
-                        const weathers = Array.from(byDate.get(dStr));
-                        weather.push({ date: dStr, weather: weathers[0] || '' });
-                        if (weather.length >= days) break;
-                    }
                 }
                 // Fallback to current one-shot if still empty
                 if (!weather.length && w.data?.current?.weather) {
@@ -198,32 +215,46 @@ router.get('/context/:businessId', authenticateUser, async (req, res) => {
                     weather.push({ date: todayStr, weather: w.data.current.weather });
                 }
             } catch (e) {
-                console.warn('[FORECAST CONTEXT] Meteosource fetch error:', e?.message || e);
+                const status = e?.response?.status;
+                console.warn('[FORECAST CONTEXT] Meteosource fetch error:', status ? `status=${status}` : '', e?.message || e);
             }
         } else {
-            console.warn('[FORECAST CONTEXT] METEOSOURCE_API_KEY not set; skipping Meteosource weather.');
+            console.warn('[FORECAST CONTEXT] Meteosource key not set; tried env names: METEOSOURCE_API_KEY, WEATHER_API_KEY, Weather_API_Key, weather_api_key');
         }
 
-        // As a last resort, keep a minimal Open-Meteo fallback if Meteosource yields nothing
-        if (!weather.length) {
-            try {
-                const startDate = now.toISOString().slice(0, 10);
-                const endDate = end.toISOString().slice(0, 10);
-                const altUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode&timezone=UTC&start_date=${startDate}&end_date=${endDate}`;
-                const w2 = await axios.get(altUrl);
-                const d2 = w2.data?.daily;
-                if (d2 && d2.time && d2.time.length) {
-                    weather = d2.time.map((date, idx) => ({ date, weather: mapOpenMeteoCodeToText(d2.weathercode?.[idx]) }));
-                }
-            } catch (e) {
-                console.warn('[FORECAST CONTEXT] Open-Meteo fallback error:', e?.message || e);
-            }
-        }
+        // // As a last resort, keep a minimal Open-Meteo fallbhshh84ag59sryite4gultt3vqylo21gq1ad6faydack if Meteosource yields nothing
+        // if (!weather.length) {
+        //     try {
+        //         const startDate = now.toISOString().slice(0, 10);
+        //         const endDate = end.toISOString().slice(0, 10);
+        //         const altUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode&timezone=UTC&start_date=${startDate}&end_date=${endDate}`;
+        //         const w2 = await axios.get(altUrl);
+        //         const d2 = w2.data?.daily;
+        //         if (d2 && d2.time && d2.time.length) {
+        //             weather = d2.time.map((date, idx) => ({ date, weather: mapOpenMeteoCodeToText(d2.weathercode?.[idx]) }));
+        //         }
+        //     } catch (e) {
+        //         console.warn('[FORECAST CONTEXT] Open-Meteo fallback error:', e?.message || e);
+        //     }
+        // }
 
         // Log summary counts for debugging
-        console.log(`[FORECAST CONTEXT] window=${windowParam}, holidays=${holidays.length}, weather_days=${weather.length}, place_id=${placeId}, lat=${lat}, lon=${lon}`);
+        const todayFormatted = todayStart.toISOString().split('T')[0];
+        const sevenDaysFormatted = sevenDaysEnd.toISOString().split('T')[0];
+        console.log(`[FORECAST CONTEXT] Today: ${todayFormatted}, 7-day window end: ${sevenDaysFormatted}`);
+        console.log(`[FORECAST CONTEXT] Total holidays fetched: ${holidayData.length}, upcoming_holidays: ${allUpcomingHolidays.length}, holidays_in_7days: ${holidaysIn7Days.length}, weather_days: ${weather.length}`);
+        if (holidaysIn7Days.length > 0) {
+            console.log(`[FORECAST CONTEXT] First holiday in 7 days: ${holidaysIn7Days[0].name} on ${holidaysIn7Days[0].date}`);
+        }
 
-        return res.json({ success: true, window: windowParam, holidays, weather, location: { lat, lon, place_id: placeId } });
+        return res.json({
+            success: true,
+            window: '7',
+            holidays: allUpcomingHolidays, // All upcoming 10 holidays for display
+            holidaysIn7Days, // Holidays within 7 days for AI forecasting
+            weather,
+            location: { lat, lon, place_id: placeId }
+        });
     } catch (e) {
         console.error('[FORECAST CONTEXT] Error:', e);
         return res.status(500).json({ error: 'Failed to fetch forecasting context', details: String(e?.message || e) });
@@ -346,15 +377,13 @@ router.get('/generate/:businessId', authenticateUser, async (req, res) => {
 });
 
 // POST /api/forecast/ai/:businessId
-// body: { window: '7'|'15'|'30', holidays?: Array<{date:string,name:string,impact?:string}>, weather?: Array<{date:string,summary:string,temp?:number,precipChance?:number}> }
+// body: { holidays?: Array<{date:string,name:string,impact?:string}>, weather?: Array<{date:string,summary:string,temp?:number,precipChance?:number}> }
+// Fixed to 7 days forecast due to free weather API limitation
 router.post('/ai/:businessId', authenticateUser, async (req, res) => {
     const { businessId } = req.params;
     const userId = req.user.id;
-    const { window = '7', holidays = [], weather = [] } = req.body || {};
-
-    if (!['7', '15', '30'].includes(String(window))) {
-        return res.status(400).json({ error: "Invalid window. Use '7', '15', or '30'" });
-    }
+    const { holidays = [], weather = [] } = req.body || {};
+    const window = '7'; // Fixed to 7 days for free weather API
 
     try {
         // Verify business ownership
@@ -378,9 +407,9 @@ router.post('/ai/:businessId', authenticateUser, async (req, res) => {
             return res.status(500).json({ error: 'Failed to load products', details: productsError });
         }
 
-        // Fetch orders within window
+        // Fetch orders within last 7 days
         const since = new Date();
-        since.setDate(since.getDate() - Number(window));
+        since.setDate(since.getDate() - 7);
         const { data: orders, error: ordersError } = await supabaseAdmin
             .from('sales_order')
             .select('sales_order_id, order_date')
@@ -429,22 +458,43 @@ router.post('/ai/:businessId', authenticateUser, async (req, res) => {
             productList.push({ id: p.product_id, name });
             if (productList.length >= 300) break;
         }
-        const holidaysList = (holidays || []).slice(0, 50);
-        const weatherList = (weather || []).slice(0, 50);
+
+        // Filter holidays to only include those within 7 days from today
+        const now = new Date();
+        const todayStart = new Date(now.toISOString().split('T')[0]); // Start of today (midnight)
+        const sevenDaysLater = new Date(todayStart);
+        sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+
+        const holidaysIn7Days = (holidays || [])
+            .filter(h => {
+                const holidayDate = new Date(h.date);
+                return holidayDate >= todayStart && holidayDate < sevenDaysLater;
+            })
+            .slice(0, 10);
+
+        const weatherList = (weather || []).slice(0, 7); // Only 7 days from free weather API
+
+        // Log filtering for debugging
+        console.log(`[FORECAST AI] Received ${(holidays || []).length} holidays, filtered to ${holidaysIn7Days.length} within 7 days`);
+        console.log(`[FORECAST AI] Date range: ${todayStart.toISOString().split('T')[0]} to ${sevenDaysLater.toISOString().split('T')[0]}`);
+        if (holidaysIn7Days.length > 0) {
+            console.log(`[FORECAST AI] Holidays in prompt:`, holidaysIn7Days.map(h => `${h.name} (${h.date})`).join(', '));
+        }
 
         const prompt = `You are a retail demand intelligence AI.
-Given the list of products for a specific business, recent trending sellers over the last ${window} days, and upcoming holidays and weather, predict which products are likely to be in HIGH demand in the next ${window} days. Identify potential anomalies where expected demand deviates from recent trends due to holidays or weather.
+Given the list of products for a specific business, recent trending sellers over the last 7 days, and upcoming holidays and weather, predict which products are likely to be in HIGH demand in the next 7 days. Identify potential anomalies where expected demand deviates from recent trends due to holidays or weather.
 
 Constraints:
 - Prefer concise, actionable heads-up.
 - Consider seasonality signals from holidays and weather (e.g., heat, rain).
 - Use only the provided product list; do not invent products.
+- Focus on 7-day forecast window.
 
 Input:
 - Products: ${JSON.stringify(productList)}
-- Trending (last ${window} days): ${JSON.stringify(trending)}
-- Upcoming Holidays (next ${window} days) [{ date, name }]: ${JSON.stringify(holidaysList)}
-- Weather Forecast (next ${window} days) [{ date, weather }]: ${JSON.stringify(weatherList)}
+- Trending (last 7 days): ${JSON.stringify(trending)}
+- Upcoming Holidays (next 7 days) [{ date, name }]: ${JSON.stringify(holidaysIn7Days)}
+- Weather Forecast (next 7 days) [{ date, weather }]: ${JSON.stringify(weatherList)}
 
 Output (STRICT JSON only):
 {
@@ -457,7 +507,7 @@ Output (STRICT JSON only):
       "rationale": "string (<=200 chars)"
     }
   ],
-  "window": "${window}",
+  "window": "7",
   "notes": ["string"]
 }`;
 
@@ -488,13 +538,103 @@ Output (STRICT JSON only):
             const jsonMatch = aiText.match(/```json\n?([\s\S]*?)\n?```/) || aiText.match(/```\n?([\s\S]*?)\n?```/);
             if (jsonMatch) jsonString = jsonMatch[1];
             const parsed = JSON.parse(jsonString);
-            return res.json({ success: true, window: String(window), insights: parsed });
+            return res.json({ success: true, window: '7', insights: parsed });
         } catch (parseErr) {
             return res.status(500).json({ error: 'AI response parsing failed', raw: aiText });
         }
     } catch (e) {
         console.error('[FORECAST AI] Error:', e);
         return res.status(500).json({ error: 'AI forecasting failed', details: String(e?.message || e) });
+    }
+});
+
+// GET /api/forecast/holidays/:businessId
+// Returns upcoming 10 holidays from current date onwards
+router.get('/holidays/:businessId', authenticateUser, async (req, res) => {
+    const { businessId } = req.params;
+    const userId = req.user.id;
+
+    try {
+        // Verify business ownership
+        const { data: business, error: businessError } = await supabaseAdmin
+            .from('businesses')
+            .select('id, name, user_id')
+            .eq('id', businessId)
+            .eq('user_id', userId)
+            .single();
+        if (businessError || !business) {
+            return res.status(403).json({ error: 'Access denied or business not found' });
+        }
+
+        const holidayApiKey = process.env.HOLIDAY_API_KEY;
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const nextYear = currentYear + 1;
+
+        // Fetch holidays for current and next year to ensure we get upcoming ones
+        const urls = holidayApiKey ? [
+            `https://calendarific.com/api/v2/holidays?api_key=${encodeURIComponent(holidayApiKey)}&country=BD&year=${currentYear}`,
+            `https://calendarific.com/api/v2/holidays?api_key=${encodeURIComponent(holidayApiKey)}&country=BD&year=${nextYear}`
+        ] : [];
+
+        let allHolidays = [];
+        if (urls.length > 0) {
+            try {
+                const responses = await Promise.all(urls.map(url => axios.get(url)));
+                const extract = (resp) => {
+                    const h = resp?.data?.response?.holidays;
+                    if (Array.isArray(h)) {
+                        return h.map(x => ({
+                            date: x.date.iso,
+                            name: x.name,
+                            type: x.primary_type || 'Holiday',
+                            public: x.type?.includes('National holiday') || false,
+                            description: x.description || ''
+                        }));
+                    }
+                    return [];
+                };
+                allHolidays = responses.flatMap(extract);
+            } catch (e) {
+                const status = e?.response?.status;
+                console.warn('[FORECAST HOLIDAYS] Calendarific API error:', status, e?.message || e);
+
+                // Fallback to static Bangladesh holidays if API fails
+                console.log('[FORECAST HOLIDAYS] Using fallback Bangladesh holidays');
+                allHolidays = [
+                    ...getBangladeshHolidaysFallback(currentYear),
+                    ...getBangladeshHolidaysFallback(nextYear)
+                ];
+            }
+        } else {
+            // No API key, use fallback
+            console.log(`[FORECAST HOLIDAYS] No API key, using fallback Bangladesh holidays`);
+            allHolidays = [
+                ...getBangladeshHolidaysFallback(currentYear),
+                ...getBangladeshHolidaysFallback(nextYear)
+            ];
+        }
+
+        // Filter to upcoming holidays only (from today onwards) and limit to 10
+        const todayStart = new Date(now.toISOString().split('T')[0]);
+        const upcomingHolidays = allHolidays
+            .filter(h => {
+                const holidayDate = new Date(h.date);
+                return holidayDate >= todayStart;
+            })
+            .sort((a, b) => (a.date < b.date ? -1 : 1))
+            .slice(0, 10);
+
+        console.log(`[FORECAST HOLIDAYS] Total holidays: ${allHolidays.length}, Upcoming: ${upcomingHolidays.length}`);
+
+        return res.json({
+            success: true,
+            currentDate: todayStart.toISOString().split('T')[0],
+            holidays: upcomingHolidays
+        });
+    } catch (e) {
+        console.error('[FORECAST HOLIDAYS] Error:', e);
+        return res.status(500).json({ error: 'Failed to fetch holidays', details: String(e?.message || e) });
     }
 });
 
