@@ -11,6 +11,41 @@ function monthKey(dateStr) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function mapOpenMeteoCodeToText(code) {
+    const m = {
+        0: 'Clear sky',
+        1: 'Mainly clear',
+        2: 'Partly cloudy',
+        3: 'Overcast',
+        45: 'Fog',
+        48: 'Depositing rime fog',
+        51: 'Light drizzle',
+        53: 'Moderate drizzle',
+        55: 'Dense drizzle',
+        56: 'Light freezing drizzle',
+        57: 'Dense freezing drizzle',
+        61: 'Slight rain',
+        63: 'Moderate rain',
+        65: 'Heavy rain',
+        66: 'Light freezing rain',
+        67: 'Heavy freezing rain',
+        71: 'Slight snow fall',
+        73: 'Moderate snow fall',
+        75: 'Heavy snow fall',
+        77: 'Snow grains',
+        80: 'Rain showers: slight',
+        81: 'Rain showers: moderate',
+        82: 'Rain showers: violent',
+        85: 'Snow showers: slight',
+        86: 'Snow showers: heavy',
+        95: 'Thunderstorm: slight or moderate',
+        96: 'Thunderstorm with slight hail',
+        99: 'Thunderstorm with heavy hail'
+    };
+    const n = Number(code);
+    return m[n] || `Weather code ${code}`;
+}
+
 function exponentialSmoothing(series, alpha = 0.3) {
     // series: [{ key: 'YYYY-MM', value: number }...] sorted by time key
     if (!series || series.length === 0) {
@@ -43,7 +78,7 @@ const groq = axios.create({
     }
 });
 
-// GET /api/forecast/context/:businessId?window=7|15|30&lat=...&lon=...
+// GET /api/forecast/context/:businessId?window=7|15|30&lat=...&lon=...&place_id=...
 // Returns standardized holidays (Bangladesh) and weather arrays for next N days
 router.get('/context/:businessId', authenticateUser, async (req, res) => {
     const { businessId } = req.params;
@@ -51,6 +86,7 @@ router.get('/context/:businessId', authenticateUser, async (req, res) => {
     const windowParam = (req.query.window || '7').toString();
     const lat = req.query.lat ? Number(req.query.lat) : 23.8103; // Dhaka default
     const lon = req.query.lon ? Number(req.query.lon) : 90.4125;
+    const placeId = (req.query.place_id || 'dhaka').toString();
 
     if (!['7', '15', '30'].includes(windowParam)) {
         return res.status(400).json({ error: "Invalid window. Use '7', '15', or '30'" });
@@ -93,18 +129,17 @@ router.get('/context/:businessId', authenticateUser, async (req, res) => {
                 const h = resp?.data?.holidays;
                 if (Array.isArray(h)) return h;
                 if (h && typeof h === 'object') {
-                    // Some responses may be an object keyed by date
                     return Object.values(h).flat();
                 }
                 return [];
             };
             holidayData = [...extract(resp1), ...extract(resp2)];
         } catch (e) {
-            // Non-fatal: return empty if service fails
+            console.warn('[FORECAST CONTEXT] Holiday API error:', e?.message || e);
             holidayData = [];
         }
 
-        const holidays = holidayData
+        let holidays = holidayData
             .map(h => ({ date: h.date, name: h.name || h.localName || 'Holiday', countryCode: 'BD' }))
             .filter(h => {
                 const d = new Date(h.date + 'T00:00:00Z');
@@ -112,28 +147,83 @@ router.get('/context/:businessId', authenticateUser, async (req, res) => {
             })
             .slice(0, 100);
 
-        // Weather: Open-Meteo 7/15/30 day forecast for given coordinates (no API key)
-        // We'll request daily summary: temperature and precipitation probability
-        const startDate = now.toISOString().slice(0, 10);
-        const endDate = end.toISOString().slice(0, 10);
-        let weather = [];
-        try {
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_mean&timezone=auto&start_date=${startDate}&end_date=${endDate}`;
-            const w = await axios.get(weatherUrl);
-            const d = w.data?.daily;
-            if (d && d.time) {
-                weather = d.time.map((date, idx) => ({
-                    date,
-                    summary: `Tmax ${d.temperature_2m_max?.[idx]}°C, Tmin ${d.temperature_2m_min?.[idx]}°C`,
-                    temp: d.temperature_2m_max?.[idx],
-                    precipChance: d.precipitation_probability_mean?.[idx]
-                }));
-            }
-        } catch (e) {
-            weather = [];
+        // Fallback: if no holidays in the strict window, include next 5 upcoming in the year
+        if (holidays.length === 0 && holidayData.length > 0) {
+            const upcoming = holidayData
+                .map(h => ({ date: h.date, name: h.name || h.localName || 'Holiday', countryCode: 'BD' }))
+                .filter(h => new Date(h.date + 'T00:00:00Z') >= new Date(now.toDateString()))
+                .sort((a, b) => (a.date < b.date ? -1 : 1))
+                .slice(0, 5);
+            holidays = upcoming;
         }
 
-        return res.json({ success: true, window: windowParam, holidays, weather, location: { lat, lon } });
+        // Weather: Meteosource API using place_id
+        const meteosourceKey = process.env.METEOSOURCE_API_KEY || '';
+        let weather = [];
+        if (meteosourceKey) {
+            try {
+                const msUrl = `https://www.meteosource.com/api/v1/free/point?place_id=${encodeURIComponent(placeId)}&sections=all&timezone=UTC&language=en&units=metric&key=${encodeURIComponent(meteosourceKey)}`;
+                const w = await axios.get(msUrl);
+                // Prefer daily if available, else derive from hourly/current
+                const daily = w.data?.daily?.data; // array with { day: 'YYYY-MM-DD', summary? or weather? }
+                if (Array.isArray(daily) && daily.length) {
+                    // Map next N days
+                    const startDateStr = now.toISOString().slice(0, 10);
+                    const endDateStr = end.toISOString().slice(0, 10);
+                    weather = daily
+                        .filter(d => d.day >= startDateStr && d.day <= endDateStr)
+                        .map(d => ({ date: d.day, weather: d.summary || d.weather || '' }));
+                }
+                // Fallback to hourly if daily missing/empty
+                if (!weather.length && Array.isArray(w.data?.hourly?.data)) {
+                    const hourly = w.data.hourly.data; // [{ date: 'YYYY-MM-DDTHH:mm:ssZ', weather: '...' }]
+                    const byDate = new Map();
+                    for (const h of hourly) {
+                        const dStr = (h.date || '').slice(0, 10);
+                        if (!dStr) continue;
+                        if (!byDate.has(dStr)) byDate.set(dStr, new Set());
+                        if (h.weather) byDate.get(dStr).add(h.weather);
+                    }
+                    const dates = Array.from(byDate.keys()).sort();
+                    for (const dStr of dates) {
+                        if (new Date(dStr) < new Date(now.toDateString()) || new Date(dStr) > end) continue;
+                        const weathers = Array.from(byDate.get(dStr));
+                        weather.push({ date: dStr, weather: weathers[0] || '' });
+                        if (weather.length >= days) break;
+                    }
+                }
+                // Fallback to current one-shot if still empty
+                if (!weather.length && w.data?.current?.weather) {
+                    const todayStr = now.toISOString().slice(0, 10);
+                    weather.push({ date: todayStr, weather: w.data.current.weather });
+                }
+            } catch (e) {
+                console.warn('[FORECAST CONTEXT] Meteosource fetch error:', e?.message || e);
+            }
+        } else {
+            console.warn('[FORECAST CONTEXT] METEOSOURCE_API_KEY not set; skipping Meteosource weather.');
+        }
+
+        // As a last resort, keep a minimal Open-Meteo fallback if Meteosource yields nothing
+        if (!weather.length) {
+            try {
+                const startDate = now.toISOString().slice(0, 10);
+                const endDate = end.toISOString().slice(0, 10);
+                const altUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode&timezone=UTC&start_date=${startDate}&end_date=${endDate}`;
+                const w2 = await axios.get(altUrl);
+                const d2 = w2.data?.daily;
+                if (d2 && d2.time && d2.time.length) {
+                    weather = d2.time.map((date, idx) => ({ date, weather: mapOpenMeteoCodeToText(d2.weathercode?.[idx]) }));
+                }
+            } catch (e) {
+                console.warn('[FORECAST CONTEXT] Open-Meteo fallback error:', e?.message || e);
+            }
+        }
+
+        // Log summary counts for debugging
+        console.log(`[FORECAST CONTEXT] window=${windowParam}, holidays=${holidays.length}, weather_days=${weather.length}, place_id=${placeId}, lat=${lat}, lon=${lon}`);
+
+        return res.json({ success: true, window: windowParam, holidays, weather, location: { lat, lon, place_id: placeId } });
     } catch (e) {
         console.error('[FORECAST CONTEXT] Error:', e);
         return res.status(500).json({ error: 'Failed to fetch forecasting context', details: String(e?.message || e) });
@@ -328,7 +418,17 @@ router.post('/ai/:businessId', authenticateUser, async (req, res) => {
         }
 
         // Build concise context for Groq
-        const productList = (products || []).map(p => ({ id: p.product_id, name: p.product_name })).slice(0, 300);
+        // Deduplicate products by name to avoid repeating the same item many times in the prompt
+        const productList = [];
+        const seenProductNames = new Set();
+        for (const p of (products || [])) {
+            const name = (p.product_name || '').trim();
+            if (!name) continue;
+            if (seenProductNames.has(name)) continue;
+            seenProductNames.add(name);
+            productList.push({ id: p.product_id, name });
+            if (productList.length >= 300) break;
+        }
         const holidaysList = (holidays || []).slice(0, 50);
         const weatherList = (weather || []).slice(0, 50);
 
@@ -343,8 +443,8 @@ Constraints:
 Input:
 - Products: ${JSON.stringify(productList)}
 - Trending (last ${window} days): ${JSON.stringify(trending)}
-- Upcoming Holidays (next ${window} days): ${JSON.stringify(holidaysList)}
-- Weather Forecast (next ${window} days): ${JSON.stringify(weatherList)}
+- Upcoming Holidays (next ${window} days) [{ date, name }]: ${JSON.stringify(holidaysList)}
+- Weather Forecast (next ${window} days) [{ date, weather }]: ${JSON.stringify(weatherList)}
 
 Output (STRICT JSON only):
 {
@@ -360,6 +460,17 @@ Output (STRICT JSON only):
   "window": "${window}",
   "notes": ["string"]
 }`;
+
+        // Print prompt for inspection (truncated for readability)
+        try {
+            const PREVIEW_LIMIT = 8000;
+            const preview = prompt.length > PREVIEW_LIMIT ? (prompt.slice(0, PREVIEW_LIMIT) + '\n... [truncated]\n') : prompt;
+            console.log('==================== [FORECAST AI PROMPT] ====================');
+            console.log(preview);
+            console.log('================== [END FORECAST AI PROMPT] ==================');
+        } catch (_) {
+            // no-op logging guard
+        }
 
         const groqResp = await groq.post('/chat/completions', {
             model: 'llama-3.1-8b-instant',
