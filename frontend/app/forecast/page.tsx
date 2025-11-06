@@ -20,6 +20,20 @@ interface TopProductItem {
 	units_sold: number;
 }
 
+interface AiHeadsUpItem {
+	product_id: string;
+	product_name: string;
+	demand_level: 'high' | 'medium' | 'low';
+	anomaly?: boolean;
+	rationale?: string;
+}
+
+interface AiInsightsPayload {
+	heads_up: AiHeadsUpItem[];
+	window: string;
+	notes?: string[];
+}
+
 type WindowKey = '7' | '15' | '30' | 'all';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
@@ -38,6 +52,10 @@ export default function ForecastPage() {
 	const [topLoading, setTopLoading] = useState<boolean>(false);
 	const [topError, setTopError] = useState<string | null>(null);
 	const [topProducts, setTopProducts] = useState<TopProductItem[]>([]);
+
+	const [aiLoading, setAiLoading] = useState<boolean>(false);
+	const [aiError, setAiError] = useState<string | null>(null);
+	const [aiInsights, setAiInsights] = useState<AiInsightsPayload | null>(null);
 
 	useEffect(() => {
 		if (!loading && !user) router.push("/auth/login");
@@ -119,6 +137,37 @@ export default function ForecastPage() {
 			confidence: typeof f.confidence_score === 'number' ? `${Math.round(f.confidence_score * 100)}%` : undefined,
 		}));
 	}, [forecast]);
+
+	const handleGenerateAi = async () => {
+		if (!selectedBusiness) return;
+		try {
+			setAiLoading(true);
+			setAiError(null);
+			setAiInsights(null);
+			const token = localStorage.getItem("access_token");
+			// Placeholder: we can extend later to allow user-provided holidays/weather
+			const body = {
+				window: topWindow === 'all' ? '30' : topWindow, // AI requires 7/15/30
+				holidays: [],
+				weather: []
+			};
+			const resp = await fetch(`${API_BASE}/forecast/ai/${selectedBusiness}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+				body: JSON.stringify(body)
+			});
+			if (!resp.ok) {
+				const e = await resp.json().catch(() => ({}));
+				throw new Error(e.error || 'Failed to generate AI insights');
+			}
+			const data = await resp.json();
+			setAiInsights(data.insights || null);
+		} catch (e: any) {
+			setAiError(e.message || 'Failed to generate AI insights');
+		} finally {
+			setAiLoading(false);
+		}
+	};
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted">
@@ -228,6 +277,75 @@ export default function ForecastPage() {
 								</tbody>
 							</table>
 						</div>
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader>
+						<CardTitle>AI Insights</CardTitle>
+						<CardDescription>Demand heads-up using holidays and weather context</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="flex items-center gap-3 mb-4">
+							<button
+								onClick={handleGenerateAi}
+								disabled={aiLoading || !selectedBusiness}
+								className={`px-4 py-2 rounded-md border ${aiLoading ? 'opacity-70 cursor-not-allowed' : ''} bg-primary text-primary-foreground border-primary`}
+							>
+								{aiLoading ? 'Generating…' : `Generate AI for ${topWindow === 'all' ? '30' : topWindow} days`}
+							</button>
+							<span className="text-xs text-muted-foreground">Uses products, recent trends, holidays, and weather</span>
+						</div>
+
+						{aiError && (
+							<div className="text-sm text-red-600 border border-red-200 bg-red-50 rounded p-3 mb-3">{aiError}</div>
+						)}
+
+						{aiInsights && (
+							<div className="space-y-3">
+								<div className="overflow-x-auto border border-border rounded-lg">
+									<table className="w-full text-sm">
+										<thead className="bg-muted/50">
+											<tr>
+												<th className="text-left p-3 font-medium">Product</th>
+												<th className="text-left p-3 font-medium">Demand</th>
+												<th className="text-left p-3 font-medium">Anomaly</th>
+												<th className="text-left p-3 font-medium">Rationale</th>
+											</tr>
+										</thead>
+										<tbody>
+											{aiInsights.heads_up?.map((it) => (
+												<tr key={it.product_id} className="border-t border-border">
+													<td className="p-3">
+														<div className="font-medium">{it.product_name}</div>
+														<div className="text-xs text-muted-foreground">{it.product_id}</div>
+													</td>
+													<td className="p-3">
+														<span className={`px-2 py-0.5 rounded text-xs ${it.demand_level==='high' ? 'bg-green-100 text-green-700' : it.demand_level==='medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{it.demand_level}</span>
+													</td>
+													<td className="p-3">
+														{it.anomaly ? <span className="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">Yes</span> : <span className="text-xs text-muted-foreground">No</span>}
+													</td>
+													<td className="p-3 max-w-[520px]">{it.rationale}</td>
+												</tr>
+											))}
+											{(!aiInsights.heads_up || aiInsights.heads_up.length === 0) && (
+												<tr>
+													<td className="p-3 text-muted-foreground" colSpan={4}>No AI heads-up available.</td>
+												</tr>
+											)}
+										</tbody>
+									</table>
+								</div>
+								{aiInsights.notes?.length ? (
+									<div className="text-xs text-muted-foreground">
+										<ul className="list-disc pl-5">
+											{aiInsights.notes.map((n, idx) => <li key={idx}>{n}</li>)}
+										</ul>
+									</div>
+								) : null}
+							</div>
+						)}
 					</CardContent>
 				</Card>
 			</main>
