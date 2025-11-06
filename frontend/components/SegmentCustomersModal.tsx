@@ -92,9 +92,9 @@ export const SegmentCustomersModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-background rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h2 className="text-2xl font-bold text-foreground">{segment} Customers</h2>
@@ -196,7 +196,7 @@ export const SegmentCustomersModal = ({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-border">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-white">
           <div className="text-sm text-muted-foreground">
             {customers.length} customers • ${statistics?.total_revenue?.toFixed(2) || 0} total revenue
           </div>
