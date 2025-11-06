@@ -1,0 +1,24 @@
+OrderRef,SupplierName,DateOrdered,ExpectedDelivery,ItemDescription,BrandName,QtyOrdered,UnitCost,TotalCost,OrderStatus,Remarks
+PUR-24-0001,Apparel Distributors Inc,01/20/2024,01/27/2024,Classic White Cotton T-Shirt,Nike,250,8.50,2125.00,Received,
+PUR-24-0001,Apparel Distributors Inc,01/20/2024,01/27/2024,Black V-Neck Premium Tee,Adidas,200,9.20,1840.00,Received,
+PUR-24-0002,Denim Suppliers Co,01/25/2024,02/05/2024,Blue Denim Slim Fit Jeans,Levi's,150,28.75,4312.50,Received,Initial order
+PUR-24-0002,Denim Suppliers Co,01/25/2024,02/05/2024,Dark Wash Straight Leg Jeans,Wrangler,180,24.50,4410.00,Received,Initial order
+PUR-24-0003,Fashion Forward LLC,02/01/2024,02/10/2024,Floral Summer Dress,Zara,100,32.00,3200.00,Received,Spring launch
+PUR-24-0003,Fashion Forward LLC,02/01/2024,02/10/2024,Little Black Cocktail Dress,H&M,80,28.50,2280.00,Received,Spring launch
+PUR-24-0004,Professional Attire Co,02/15/2024,02/25/2024,Silk Business Blouse,Calvin Klein,120,42.00,5040.00,Received,
+PUR-24-0004,Professional Attire Co,02/15/2024,02/25/2024,Oxford Button-Down Shirt,Ralph Lauren,150,35.50,5325.00,Received,
+PUR-24-0005,Seasonal Clothing Ltd,03/01/2024,03/10/2024,Wool Blend Pullover Sweater,Gap,220,22.00,4840.00,Received,
+PUR-24-0005,Seasonal Clothing Ltd,03/01/2024,03/10/2024,Cashmere V-Neck Sweater,Banana Republic,100,58.00,5800.00,Received,
+PUR-24-0006,Outerwear Specialists,03/15/2024,03/25/2024,Leather Motorcycle Jacket,All Saints,40,125.00,5000.00,Received,Limited edition
+PUR-24-0006,Outerwear Specialists,03/15/2024,03/25/2024,Puffer Winter Coat,North Face,75,89.00,6675.00,Received,
+PUR-24-0007,Footwear Plus,04/01/2024,04/08/2024,Running Sneakers,Nike,350,45.00,15750.00,Received,Popular item
+PUR-24-0007,Footwear Plus,04/01/2024,04/08/2024,High-Top Canvas Shoes,Converse,300,28.00,8400.00,Received,
+PUR-24-0008,Footwear Plus,04/15/2024,04/22/2024,Ankle Leather Boots,Timberland,180,72.00,12960.00,Received,
+PUR-24-0009,Accessories Warehouse,05/01/2024,05/05/2024,Leather Belt - Brown,Fossil,500,12.50,6250.00,Received,
+PUR-24-0009,Accessories Warehouse,05/01/2024,05/05/2024,Designer Sunglasses,Ray-Ban,250,68.00,17000.00,Received,
+PUR-24-0009,Accessories Warehouse,05/01/2024,05/05/2024,Wool Knit Beanie,Carhartt,400,8.00,3200.00,Received,
+PUR-24-0010,Luxury Goods Supply,05/15/2024,05/22/2024,Canvas Tote Bag,Coach,200,45.00,9000.00,Received,
+PUR-24-0010,Luxury Goods Supply,05/15/2024,05/22/2024,Leather Backpack,Herschel,100,58.00,5800.00,Received,
+PUR-24-0011,Apparel Distributors Inc,10/15/2024,10/22/2024,Classic White Cotton T-Shirt,Nike,200,8.50,1700.00,In Transit,Restock
+PUR-24-0012,Seasonal Clothing Ltd,10/25/2024,11/05/2024,Wool Blend Pullover Sweater,Gap,250,22.00,5500.00,Pending,Winter prep
+PUR-24-0013,Outerwear Specialists,11/01/2024,11/10/2024,Puffer Winter Coat,North Face,100,89.00,8900.00,Pending,Holiday inventory

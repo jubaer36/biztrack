@@ -1,0 +1,21 @@
+SKU,ItemDescription,ProductLine,Manufacturer,InStock,BuyPrice,RetailPrice,VendorName,StorageArea,ItemStatus,Notes
+FH-TS-001,Classic White Cotton T-Shirt,Casual Wear,Nike,234,8.50,24.99,Apparel Distributors Inc,Zone-A-Shelf-12,Available,Best seller
+FH-TS-002,Black V-Neck Premium Tee,Casual Wear,Adidas,189,9.20,26.99,Apparel Distributors Inc,Zone-A-Shelf-12,Available,
+FH-JN-003,Blue Denim Slim Fit Jeans,Denim,Levi's,145,28.75,79.99,Denim Suppliers Co,Zone-B-Rack-5,Available,Multiple sizes
+FH-JN-004,Dark Wash Straight Leg Jeans,Denim,Wrangler,167,24.50,69.99,Denim Suppliers Co,Zone-B-Rack-5,Available,
+FH-DR-005,Floral Summer Dress,Women's Fashion,Zara,98,32.00,89.99,Fashion Forward LLC,Zone-C-Rail-3,Available,Spring collection
+FH-DR-006,Little Black Cocktail Dress,Women's Fashion,H&M,76,28.50,79.99,Fashion Forward LLC,Zone-C-Rail-3,Available,Evening wear
+FH-BL-007,Silk Business Blouse,Women's Professional,Calvin Klein,112,42.00,119.99,Professional Attire Co,Zone-C-Rail-7,Available,
+FH-SH-008,Oxford Button-Down Shirt,Men's Formal,Ralph Lauren,134,35.50,99.99,Professional Attire Co,Zone-A-Rack-8,Available,Available in 5 colors
+FH-SW-009,Wool Blend Pullover Sweater,Knitwear,Gap,201,22.00,64.99,Seasonal Clothing Ltd,Zone-D-Bin-2,Available,Winter item
+FH-SW-010,Cashmere V-Neck Sweater,Knitwear,Banana Republic,88,58.00,159.99,Seasonal Clothing Ltd,Zone-D-Bin-2,Available,Premium quality
+FH-JK-011,Leather Motorcycle Jacket,Outerwear,All Saints,34,125.00,349.99,Outerwear Specialists,Zone-E-Hanger-1,Available,Limited stock
+FH-JK-012,Puffer Winter Coat,Outerwear,North Face,67,89.00,249.99,Outerwear Specialists,Zone-E-Hanger-2,Available,
+FH-SN-013,Running Sneakers,Footwear,Nike,312,45.00,129.99,Footwear Plus,Zone-F-Shelf-1,Available,Multiple sizes
+FH-SN-014,High-Top Canvas Shoes,Footwear,Converse,267,28.00,74.99,Footwear Plus,Zone-F-Shelf-2,Available,Classic style
+FH-BT-015,Ankle Leather Boots,Footwear,Timberland,156,72.00,199.99,Footwear Plus,Zone-F-Shelf-5,Available,
+FH-AC-016,Leather Belt - Brown,Accessories,Fossil,445,12.50,39.99,Accessories Warehouse,Zone-G-Box-12,Available,
+FH-AC-017,Designer Sunglasses,Accessories,Ray-Ban,223,68.00,189.99,Accessories Warehouse,Zone-G-Display-3,Available,UV protection
+FH-AC-018,Wool Knit Beanie,Accessories,Carhartt,334,8.00,24.99,Accessories Warehouse,Zone-G-Box-8,Available,Winter accessory
+FH-BG-019,Canvas Tote Bag,Bags,Coach,178,45.00,129.99,Luxury Goods Supply,Zone-H-Shelf-4,Available,
+FH-BG-020,Leather Backpack,Bags,Herschel,89,58.00,169.99,Luxury Goods Supply,Zone-H-Shelf-6,Available,

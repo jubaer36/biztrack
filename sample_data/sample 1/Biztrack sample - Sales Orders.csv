@@ -1,0 +1,26 @@
+Priority,Order,Product,Status,Order date,Price,Sales platform,Point of contact,Notes
+P0,SO001,Wireless Bluetooth Headphones,Received,2025-10-01,79.99,Online,john.doe@email.com,Gift for birthday
+P1,SO002,Smartphone Case - iPhone 13,Accepted,2025-10-02,19.99,In store,sarah.smith@email.com,Matching color with phone
+P2,SO003,Cotton T-Shirt - Blue,Shipped,2025-09-28,14.99,In store,mike.johnson@email.com,Bulk order for team
+P3,SO004,Stainless Steel Water Bottle,Delivered,2025-09-25,24.99,Online,lisa.brown@email.com,Eco-friendly choice
+P0,SO005,Yoga Mat,Received,2025-10-03,29.99,Online,david.wilson@email.com,Beginner yoga starter kit
+P1,SO006,Paperback Novel - Mystery,Accepted,2025-10-01,12.99,In store,anna.davis@email.com,Weekend reading
+P2,SO007,LED Desk Lamp,Shipped,2025-09-30,39.99,Online,mark.taylor@email.com,Home office setup
+P3,SO008,Denim Jeans - Slim Fit,Delivered,2025-09-27,49.99,In store,emma.anderson@email.com,Perfect fit
+P1,SO009,Ceramic Plant Pot,Accepted,2025-10-04,16.99,Online,ryan.thomas@email.com,Indoor plant collection
+P2,SO010,Dumbbells Set - 5kg,Shipped,2025-10-02,34.99,In store,sophia.jackson@email.com,Home gym equipment
+P3,SO011,Hardcover Cookbook,Delivered,2025-09-29,22.99,Online,chris.white@email.com,Cooking enthusiast
+P0,SO012,Wireless Mouse,Received,2025-10-05,25.99,Online,julia.harris@email.com,Ergonomic design needed
+P1,SO013,Wool Sweater,Accepted,2025-10-03,59.99,In store,alex.martin@email.com,Winter wardrobe update
+P2,SO014,Garden Hose - 50ft,Shipped,2025-10-01,31.99,Online,taylor.garcia@email.com,Gardening project
+P3,SO015,Resistance Bands Set,Delivered,2025-09-30,19.99,In store,jordan.rodriguez@email.com,Fitness routine
+P1,SO016,Science Fiction Novel,Accepted,2025-10-06,15.99,Online,morgan.lopez@email.com,Sci-fi fan
+P2,SO017,Bluetooth Speaker,Shipped,2025-10-04,49.99,In store,cameron.gonzalez@email.com,Outdoor activities
+P3,SO018,Cotton Hoodie,Delivered,2025-10-02,39.99,Online,reese.perez@email.com,Casual wear
+P0,SO019,Indoor Herb Garden Kit,Received,2025-10-07,44.99,Online,casey.williams@email.com,Kitchen herbs
+P1,SO020,Tennis Racket,Accepted,2025-10-05,89.99,In store,skylar.lee@email.com,Sports beginner
+P2,SO021,Biography - Tech Entrepreneur,Shipped,2025-10-03,18.99,Online,riley.walker@email.com,Inspirational read
+P3,SO022,USB-C Cable,Delivered,2025-10-01,9.99,In store,devin.hall@email.com,Device accessories
+P1,SO023,Running Shoes,Accepted,2025-10-08,79.99,Online,avery.allen@email.com,Athletic shoes
+P2,SO024,Wall Clock - Modern,Shipped,2025-10-06,26.99,In store,payton.young@email.com,Home decor
+P3,SO025,Yoga Block,Delivered,2025-10-04,12.99,Online,logan.king@email.com,Yoga accessories

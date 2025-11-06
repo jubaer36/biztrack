@@ -1,0 +1,28 @@
+SO Number,Customer,Order Date,Product,Brand,Quantity,Unit Price,Line Total,Shipping Address,Status,Delivery Date
+SO-2024-001,Best Buy Stores,2024-02-05,iPhone 15 Pro,Apple,15,1299,19485,100 Best Buy Way Minneapolis MN 55402,Delivered,2024-02-12
+SO-2024-001,Best Buy Stores,2024-02-05,Galaxy S24,Samsung,20,849,16980,100 Best Buy Way Minneapolis MN 55402,Delivered,2024-02-12
+SO-2024-002,Amazon Retail,2024-02-10,MacBook Air 13",Apple,10,1299,12990,Multiple Warehouses,Delivered,2024-02-17
+SO-2024-003,Target Corporation,2024-02-15,iPad Air,Apple,25,699,17475,1000 Nicollet Mall Minneapolis MN 55403,Delivered,2024-02-22
+SO-2024-004,Walmart Inc,2024-03-01,AirPods Pro,Apple,50,249,12450,702 SW 8th Street Bentonville AR 72716,Delivered,2024-03-08
+SO-2024-005,Newegg Commerce,2024-03-05,Dell XPS 15,Dell,8,1799,14392,2885 Campus Drive Industry CA 91745,Delivered,2024-03-12
+SO-2024-006,B&H Photo Video,2024-03-10,Sony WH-1000XM5,Sony,12,399,4788,420 9th Avenue New York NY 10001,Delivered,2024-03-17
+SO-2024-007,Costco Wholesale,2024-03-15,MacBook Pro 16",Apple,15,2799,41985,999 Lake Drive Issaquah WA 98027,Delivered,2024-03-22
+SO-2024-008,Apple Store,2024-03-20,iPad Pro 12.9",Apple,20,1199,23980,1 Apple Park Way Cupertino CA 95014,Delivered,2024-03-27
+SO-2024-009,Micro Center,2024-04-01,ThinkPad X1 Carbon,Lenovo,5,1599,7995,4119 Leap Road Hilliard OH 43026,Delivered,2024-04-08
+SO-2024-010,Best Buy Stores,2024-04-10,27" 4K Monitor,LG,10,549,5490,100 Best Buy Way Minneapolis MN 55402,Delivered,2024-04-17
+SO-2024-011,Corporate Buyers LLC,2024-04-15,Galaxy Tab S9,Samsung,15,599,8985,555 Business Plaza Boston MA 02101,Delivered,2024-04-22
+SO-2024-012,Amazon Retail,2024-05-01,USB-C Hub,Anker,100,49,4900,Multiple Warehouses,Delivered,2024-05-08
+SO-2024-013,Target Corporation,2024-05-05,Wireless Charger,Belkin,80,39,3120,1000 Nicollet Mall Minneapolis MN 55403,Delivered,2024-05-12
+SO-2024-014,Walmart Inc,2024-05-10,Magic Keyboard,Apple,30,129,3870,702 SW 8th Street Bentonville AR 72716,Delivered,2024-05-17
+SO-2024-015,Newegg Commerce,2024-06-01,iPhone 15,Apple,25,999,24975,2885 Campus Drive Industry CA 91745,Delivered,2024-06-08
+SO-2024-016,B&H Photo Video,2024-06-15,Bose QC45,Bose,18,349,6282,420 9th Avenue New York NY 10001,Delivered,2024-06-22
+SO-2024-017,Costco Wholesale,2024-07-01,Galaxy S24 Ultra,Samsung,12,1199,14388,999 Lake Drive Issaquah WA 98027,Delivered,2024-07-08
+SO-2024-018,Apple Store,2024-07-15,MacBook Air 13",Apple,18,1299,23382,1 Apple Park Way Cupertino CA 95014,Delivered,2024-07-22
+SO-2024-019,Micro Center,2024-08-01,34" Ultrawide,Samsung,5,899,4495,4119 Leap Road Hilliard OH 43026,Delivered,2024-08-08
+SO-2024-020,Best Buy Stores,2024-08-15,Magic Mouse,Apple,40,99,3960,100 Best Buy Way Minneapolis MN 55402,Delivered,2024-08-22
+SO-2024-021,Amazon Retail,2024-09-01,AirPods Pro,Apple,60,249,14940,Multiple Warehouses,Delivered,2024-09-08
+SO-2024-022,Target Corporation,2024-09-15,iPad Pro 12.9",Apple,18,1199,21582,1000 Nicollet Mall Minneapolis MN 55403,Delivered,2024-09-22
+SO-2024-023,Walmart Inc,2024-10-01,iPhone 15 Pro,Apple,22,1299,28578,702 SW 8th Street Bentonville AR 72716,Delivered,2024-10-08
+SO-2024-024,Newegg Commerce,2024-10-15,Dell XPS 15,Dell,12,1799,21588,2885 Campus Drive Industry CA 91745,Shipped,2024-10-22
+SO-2024-025,Corporate Buyers LLC,2024-10-20,ThinkPad X1 Carbon,Lenovo,8,1599,12792,555 Business Plaza Boston MA 02101,Processing,2024-10-27
+SO-2024-026,B&H Photo Video,2024-11-01,Sony WH-1000XM5,Sony,15,399,5985,420 9th Avenue New York NY 10001,Processing,2024-11-08

@@ -1,0 +1,28 @@
+ExpenseDate,CostType,ExpenseDetails,AmountPaid,PaymentType,PayeeName,CurrentStatus,ExtraInfo
+01-08-2024,Facility Rent,Main warehouse monthly lease,18000,Wire Transfer,Premium Properties Inc,Paid,January 2024
+01-08-2024,Facility Rent,Retail showroom rent,8500,Wire Transfer,Downtown Realty,Paid,January 2024
+01-12-2024,Power & Utilities,Electric and water service,4200,ACH,City Utilities Department,Paid,January 2024
+01-18-2024,Staff Compensation,Monthly payroll for 22 employees,68000,Direct Deposit,Various Employees,Paid,January payroll
+01-22-2024,Logistics,Shipping and freight costs,5800,Credit Card,FastShip Logistics,Paid,January deliveries
+01-28-2024,Advertising,Social media and online ads,8500,Credit Card,Digital Marketing Agency,Paid,January campaigns
+02-05-2024,Insurance Premium,General liability insurance,6200,Bank Transfer,Business Insurance Co,Paid,Quarterly premium
+02-08-2024,Facility Rent,All facilities,26500,Wire Transfer,Multiple,Paid,February 2024
+02-12-2024,Power & Utilities,All utilities,4500,ACH,City Utilities Department,Paid,February 2024
+02-18-2024,Staff Compensation,Monthly payroll,70000,Direct Deposit,Various Employees,Paid,February payroll - 23 employees
+02-25-2024,Equipment Purchase,New display fixtures,12000,Company Card,Retail Equipment Supply,Paid,Showroom upgrade
+03-08-2024,Facility Rent,All facilities,26500,Wire Transfer,Multiple,Paid,March 2024
+03-12-2024,Power & Utilities,All utilities,4800,ACH,City Utilities Department,Paid,March 2024
+03-18-2024,Staff Compensation,Monthly payroll,70000,Direct Deposit,Various Employees,Paid,March payroll
+03-25-2024,Trade Show,Fashion industry expo booth,15000,Credit Card,Expo Management,Paid,Spring Fashion Week
+04-08-2024,Facility Rent,All facilities,26500,Wire Transfer,Multiple,Paid,April 2024
+04-12-2024,Power & Utilities,All utilities,4600,ACH,City Utilities Department,Paid,April 2024
+04-18-2024,Staff Compensation,Monthly payroll,72000,Direct Deposit,Various Employees,Paid,April payroll - 24 employees
+04-25-2024,Logistics,Delivery fleet maintenance,6500,Check,Auto Service Center,Paid,Quarterly service
+05-05-2024,Insurance Premium,Business insurance,6200,Bank Transfer,Business Insurance Co,Paid,Quarterly premium
+05-08-2024,Facility Rent,All facilities,26500,Wire Transfer,Multiple,Paid,May 2024
+05-12-2024,Power & Utilities,All utilities,5100,ACH,City Utilities Department,Paid,May 2024
+05-18-2024,Staff Compensation,Monthly payroll,72000,Direct Deposit,Various Employees,Paid,May payroll
+05-28-2024,Tech Services,E-commerce platform subscription,7500,Credit Card,ShopifyPlus,Paid,Annual renewal
+06-08-2024,Facility Rent,All facilities,26500,Wire Transfer,Multiple,Paid,June 2024
+06-12-2024,Power & Utilities,All utilities,5400,ACH,City Utilities Department,Paid,June 2024 - AC usage
+06-18-2024,Staff Compensation,Monthly payroll,72000,Direct Deposit,Various Employees,Paid,June payroll

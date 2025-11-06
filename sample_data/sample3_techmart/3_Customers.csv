@@ -1,0 +1,11 @@
+Customer Name,Email,Phone,Customer Type,Billing Address,Shipping Address,Credit Limit,Status
+Best Buy Stores,purchasing@bestbuy.com,+1-555-0201,Retail,100 Best Buy Way Minneapolis MN 55402,Same as Billing,500000,Active
+Target Corporation,orders@target.com,+1-555-0202,Retail,1000 Nicollet Mall Minneapolis MN 55403,Same as Billing,750000,Active
+Amazon Retail,vendor@amazon.com,+1-555-0203,Online,410 Terry Avenue Seattle WA 98109,Multiple Locations,1000000,Active
+Walmart Inc,supplier.relations@walmart.com,+1-555-0204,Retail,702 SW 8th Street Bentonville AR 72716,Same as Billing,900000,Active
+Costco Wholesale,purchasing@costco.com,+1-555-0205,Wholesale,999 Lake Drive Issaquah WA 98027,Same as Billing,600000,Active
+Newegg Commerce,vendors@newegg.com,+1-555-0206,Online,2885 Campus Drive Industry CA 91745,Same as Billing,400000,Active
+B&H Photo Video,purchasing@bhphoto.com,+1-555-0207,Retail,420 9th Avenue New York NY 10001,Same as Billing,350000,Active
+Micro Center,buying@microcenter.com,+1-555-0208,Retail,4119 Leap Road Hilliard OH 43026,Same as Billing,300000,Active
+Apple Store,applestore@apple.com,+1-555-0209,Retail,1 Apple Park Way Cupertino CA 95014,Same as Billing,800000,Active
+Corporate Buyers LLC,info@corpbuyers.com,+1-555-0210,Wholesale,555 Business Plaza Boston MA 02101,Same as Billing,250000,Active

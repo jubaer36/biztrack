@@ -1,0 +1,11 @@
+ClientID,BusinessName,ContactEmail,PhoneNumber,ClientCategory,BillingAddr,ShippingAddr,CreditAmount,AccountStatus,RegistrationDate
+C-1001,Macy's Department Store,procurement@macys.com,800-555-1001,Retail Chain,"Herald Square, New York, NY 10001",Multiple Distribution Centers,800000,Active,2023-01-15
+C-1002,Nordstrom Inc,buyers@nordstrom.com,800-555-1002,High-End Retail,"1617 6th Ave, Seattle, WA 98101",Regional Warehouses,950000,Active,2023-01-20
+C-1003,TJ Maxx Stores,purchasing@tjmaxx.com,800-555-1003,Discount Retail,"770 Cochituate Rd, Framingham, MA 01701",Same as billing,600000,Active,2023-02-01
+C-1004,Bloomingdale's,vendor.relations@bloomingdales.com,800-555-1004,Luxury Retail,"1000 3rd Ave, New York, NY 10022",Same as billing,750000,Active,2023-02-15
+C-1005,Urban Outfitters,sourcing@urbanoutfitters.com,800-555-1005,Youth Fashion,"5000 S Broad St, Philadelphia, PA 19112",Distribution Network,500000,Active,2023-03-01
+C-1006,Fashion Boutique Online,orders@fashionboutique.com,888-555-1006,E-Commerce,"1234 Tech Park, Austin, TX 78701",Fulfillment Centers,400000,Active,2023-03-15
+C-1007,Style Destination,buying@styledest.com,877-555-1007,Department Store,"5678 Shopping Center, Atlanta, GA 30303",Same as billing,550000,Active,2023-04-01
+C-1008,Trendy Fashion Co,info@trendyfashion.com,866-555-1008,Wholesaler,"9012 Wholesale Dist, Dallas, TX 75201",Same as billing,350000,Active,2023-05-01
+C-1009,Campus Clothing Store,purchasing@campusclothing.com,844-555-1009,University Store,"University Ave, Berkeley, CA 94720",Same as billing,250000,Active,2023-06-01
+C-1010,Fashion Warehouse Club,vendors@fashionwarehouse.com,833-555-1010,Wholesale Club,"3456 Club Blvd, Phoenix, AZ 85001",Regional Centers,700000,Active,2023-07-01

@@ -1,0 +1,25 @@
+TransactionID,BuyerName,TransactionDate,ProductSKU,Brand,UnitsSold,PricePerUnit,TotalRevenue,DeliveryAddress,TransactionStatus,DeliveredOn
+TX-2024-001,Macy's Department Store,02/10/2024,FH-TS-001,Nike,50,24.99,1249.50,"Herald Square, New York, NY 10001",Completed,02/17/2024
+TX-2024-002,Nordstrom Inc,02/15/2024,FH-JN-003,Levi's,35,79.99,2799.65,"Regional Warehouse - Seattle",Completed,02/22/2024
+TX-2024-003,TJ Maxx Stores,02/20/2024,FH-TS-002,Adidas,45,26.99,1214.55,"770 Cochituate Rd, Framingham, MA 01701",Completed,02/27/2024
+TX-2024-004,Bloomingdale's,03/01/2024,FH-DR-005,Zara,25,89.99,2249.75,"1000 3rd Ave, New York, NY 10022",Completed,03/08/2024
+TX-2024-005,Urban Outfitters,03/05/2024,FH-SH-008,Ralph Lauren,40,99.99,3999.60,"Distribution Network",Completed,03/12/2024
+TX-2024-006,Fashion Boutique Online,03/15/2024,FH-SW-010,Banana Republic,15,159.99,2399.85,"Fulfillment Centers - Austin",Completed,03/22/2024
+TX-2024-007,Style Destination,03/20/2024,FH-SN-013,Nike,80,129.99,10399.20,"5678 Shopping Center, Atlanta, GA 30303",Completed,03/27/2024
+TX-2024-008,Trendy Fashion Co,04/01/2024,FH-AC-016,Fossil,120,39.99,4798.80,"9012 Wholesale Dist, Dallas, TX 75201",Completed,04/08/2024
+TX-2024-009,Campus Clothing Store,04/10/2024,FH-SN-014,Converse,60,74.99,4499.40,"University Ave, Berkeley, CA 94720",Completed,04/17/2024
+TX-2024-010,Fashion Warehouse Club,04/20/2024,FH-JK-012,North Face,25,249.99,6249.75,"Regional Center - Phoenix",Completed,04/27/2024
+TX-2024-011,Macy's Department Store,05/01/2024,FH-AC-017,Ray-Ban,50,189.99,9499.50,"Multiple Distribution Centers",Completed,05/08/2024
+TX-2024-012,Nordstrom Inc,05/15/2024,FH-BG-019,Coach,30,129.99,3899.70,"Regional Warehouse - Seattle",Completed,05/22/2024
+TX-2024-013,TJ Maxx Stores,06/01/2024,FH-DR-006,H&M,28,79.99,2239.72,"Same as billing",Completed,06/08/2024
+TX-2024-014,Bloomingdale's,06/15/2024,FH-BL-007,Calvin Klein,22,119.99,2639.78,"1000 3rd Ave, New York, NY 10022",Completed,06/22/2024
+TX-2024-015,Urban Outfitters,07/01/2024,FH-JN-004,Wrangler,38,69.99,2659.62,"Distribution Network",Completed,07/08/2024
+TX-2024-016,Fashion Boutique Online,07/15/2024,FH-BG-020,Herschel,18,169.99,3059.82,"Fulfillment Centers - Austin",Completed,07/22/2024
+TX-2024-017,Style Destination,08/01/2024,FH-BT-015,Timberland,32,199.99,6399.68,"5678 Shopping Center, Atlanta, GA 30303",Completed,08/08/2024
+TX-2024-018,Trendy Fashion Co,08/15/2024,FH-AC-018,Carhartt,95,24.99,2374.05,"9012 Wholesale Dist, Dallas, TX 75201",Completed,08/22/2024
+TX-2024-019,Campus Clothing Store,09/01/2024,FH-SW-009,Gap,42,64.99,2729.58,"University Ave, Berkeley, CA 94720",Completed,09/08/2024
+TX-2024-020,Fashion Warehouse Club,09/15/2024,FH-TS-001,Nike,75,24.99,1874.25,"Regional Center - Phoenix",Completed,09/22/2024
+TX-2024-021,Macy's Department Store,10/01/2024,FH-JK-011,All Saints,8,349.99,2799.92,"Multiple Distribution Centers",Completed,10/08/2024
+TX-2024-022,Nordstrom Inc,10/15/2024,FH-SN-013,Nike,65,129.99,8449.35,"Regional Warehouse - Seattle",Shipped,10/22/2024
+TX-2024-023,TJ Maxx Stores,10/20/2024,FH-TS-002,Adidas,55,26.99,1484.45,"Same as billing",Processing,Est. 10/27/2024
+TX-2024-024,Bloomingdale's,11/01/2024,FH-SW-010,Banana Republic,20,159.99,3199.80,"1000 3rd Ave, New York, NY 10022",Processing,Est. 11/08/2024
