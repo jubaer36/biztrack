@@ -1,0 +1,24 @@
+PO Number,Supplier,Order Date,Delivery Date,Product,Brand,Quantity,Unit Cost,Line Total,Status,Notes
+PO-2024-001,TechSupply Co,2024-01-15,2024-01-22,iPhone 15 Pro,Apple,50,950,47500,Delivered,Initial stock order
+PO-2024-001,TechSupply Co,2024-01-15,2024-01-22,iPhone 15,Apple,70,750,52500,Delivered,Initial stock order
+PO-2024-002,Global Electronics,2024-01-18,2024-01-25,Galaxy S24 Ultra,Samsung,40,880,35200,Delivered,
+PO-2024-002,Global Electronics,2024-01-18,2024-01-25,Galaxy S24,Samsung,60,620,37200,Delivered,
+PO-2024-003,TechSupply Co,2024-02-01,2024-02-08,MacBook Pro 16",Apple,25,2100,52500,Delivered,
+PO-2024-003,TechSupply Co,2024-02-01,2024-02-08,MacBook Air 13",Apple,35,980,34300,Delivered,
+PO-2024-004,Dell Direct,2024-02-10,2024-02-17,Dell XPS 15,Dell,30,1350,40500,Delivered,
+PO-2024-005,Lenovo Partner,2024-02-15,2024-02-25,ThinkPad X1 Carbon,Lenovo,20,1180,23600,Delivered,
+PO-2024-006,TechSupply Co,2024-03-01,2024-03-08,iPad Pro 12.9",Apple,45,880,39600,Delivered,
+PO-2024-006,TechSupply Co,2024-03-01,2024-03-08,iPad Air,Apple,60,520,31200,Delivered,
+PO-2024-007,Global Electronics,2024-03-05,2024-03-12,Galaxy Tab S9,Samsung,40,450,18000,Delivered,
+PO-2024-008,TechSupply Co,2024-03-10,2024-03-15,AirPods Pro,Apple,150,180,27000,Delivered,
+PO-2024-009,Audio Partners,2024-03-12,2024-03-19,Sony WH-1000XM5,Sony,50,280,14000,Delivered,
+PO-2024-009,Audio Partners,2024-03-12,2024-03-19,Bose QC45,Bose,45,250,11250,Delivered,
+PO-2024-010,TechSupply Co,2024-04-01,2024-04-05,Magic Keyboard,Apple,100,90,9000,Delivered,
+PO-2024-010,TechSupply Co,2024-04-01,2024-04-05,Magic Mouse,Apple,100,65,6500,Delivered,
+PO-2024-011,SmallTech Supply,2024-04-10,2024-04-15,USB-C Hub,Anker,200,25,5000,Delivered,
+PO-2024-011,SmallTech Supply,2024-04-10,2024-04-15,Wireless Charger,Belkin,200,20,4000,Delivered,
+PO-2024-012,Display Tech,2024-04-20,2024-04-27,27" 4K Monitor,LG,25,380,9500,Delivered,
+PO-2024-013,Global Electronics,2024-04-25,2024-05-02,34" Ultrawide,Samsung,20,620,12400,Delivered,
+PO-2024-014,TechSupply Co,2024-10-15,2024-10-22,iPhone 15 Pro,Apple,30,950,28500,In Transit,Restock order
+PO-2024-015,Global Electronics,2024-10-20,2024-10-27,Galaxy S24,Samsung,40,620,24800,Pending,
+PO-2024-016,Audio Partners,2024-11-01,2024-11-08,Sony WH-1000XM5,Sony,35,280,9800,Pending,Holiday season prep

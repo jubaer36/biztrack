@@ -6,6 +6,73 @@ const Business = require('../models/Business');
 const { supabase, supabaseAdmin } = require('../config/supabase');
 const router = express.Router();
 
+// Function to detect headers and data start position in Excel sheets
+function detectHeadersAndData(jsonData) {
+    if (!jsonData || jsonData.length === 0) {
+        return { headerRowIndex: -1, dataStartIndex: 0, headers: [] };
+    }
+
+    let headerRowIndex = 0;
+    let dataStartIndex = 1;
+
+    // Skip completely empty rows at the beginning
+    while (headerRowIndex < jsonData.length) {
+        const row = jsonData[headerRowIndex];
+        const nonEmptyCells = row.filter(cell => 
+            cell !== null && 
+            cell !== undefined && 
+            String(cell).trim() !== ''
+        );
+        
+        if (nonEmptyCells.length > 0) {
+            break; // Found first non-empty row
+        }
+        headerRowIndex++;
+    }
+
+    if (headerRowIndex >= jsonData.length) {
+        return { headerRowIndex: -1, dataStartIndex: jsonData.length, headers: [] };
+    }
+
+    // Check if the first non-empty row is likely a title (only one non-empty cell)
+    const firstRow = jsonData[headerRowIndex];
+    const firstRowNonEmpty = firstRow.filter(cell => 
+        cell !== null && 
+        cell !== undefined && 
+        String(cell).trim() !== ''
+    );
+
+    if (firstRowNonEmpty.length === 1 && headerRowIndex + 1 < jsonData.length) {
+        // This looks like a title row, check the next row for headers
+        const nextRow = jsonData[headerRowIndex + 1];
+        const nextRowNonEmpty = nextRow.filter(cell => 
+            cell !== null && 
+            cell !== undefined && 
+            String(cell).trim() !== ''
+        );
+
+        // If next row has more non-empty cells, it's likely the header row
+        if (nextRowNonEmpty.length > firstRowNonEmpty.length) {
+            headerRowIndex++;
+            dataStartIndex = headerRowIndex + 1;
+        }
+    }
+
+    // Generate headers from the detected header row
+    const headerRow = jsonData[headerRowIndex];
+    const headers = headerRow.map((h, idx) => {
+        const headerStr = String(h || '').trim();
+        // If header is empty, use column letter (A, B, C, etc.)
+        return headerStr || `Column_${String.fromCharCode(65 + idx)}`;
+    });
+
+    return {
+        headerRowIndex,
+        dataStartIndex,
+        headers
+    };
+}
+
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -100,16 +167,12 @@ router.post('/businesses/:businessId/upload-excel', authenticateToken, upload.ar
                     // Create collection name: businessId_sheetName
                     const collectionName = `${businessId}_${sheetName.replace(/[^a-zA-Z0-9_]/g, '_')}`;
 
-                    // Get headers from first row - keep exactly as in Excel
-                    const headers = jsonData[0].map((h, idx) => {
-                        const headerStr = String(h || '').trim();
-                        // If header is empty, use column letter (A, B, C, etc.)
-                        return headerStr || `Column_${String.fromCharCode(65 + idx)}`;
-                    });
+                    // Detect headers and data start position
+                    const { headerRowIndex, dataStartIndex, headers } = detectHeadersAndData(jsonData);
                     
                     if (headers.length === 0) continue; // Skip if no columns
                     
-                    const rows = jsonData.slice(1);
+                    const rows = jsonData.slice(dataStartIndex);
 
                     // Filter out ONLY completely empty rows (all columns are empty)
                     const documents = rows
@@ -124,7 +187,7 @@ router.post('/businesses/:businessId/upload-excel', authenticateToken, upload.ar
                         })
                         .map((row, rowIndex) => {
                             const doc = {
-                                _rowNumber: rowIndex + 2 // Store original row number from Excel (1-indexed, +1 for header)
+                                _rowNumber: dataStartIndex + rowIndex + 1 // Store original row number from Excel (1-indexed)
                             };
                             headers.forEach((header, index) => {
                                 const value = row[index];
@@ -538,8 +601,7 @@ router.get('/businesses/:businessId/postgres-data', authenticateToken, async (re
                 const { data, error } = await supabaseAdmin
                     .from(tableName)
                     .select('*')
-                    .eq('business_id', businessId)
-                    .limit(100); // Limit to 100 rows for preview
+                    .eq('business_id', businessId);
 
                 if (error) {
                     console.error(`Error fetching from ${tableName}:`, error);
@@ -554,7 +616,7 @@ router.get('/businesses/:businessId/postgres-data', authenticateToken, async (re
                         table_name: tableName,
                         record_count: data.length,
                         columns: columns,
-                        sample_data: data.slice(0, 10) // Return first 10 rows as sample
+                        sample_data: data // Return all rows instead of just sample
                     });
                 }
             } catch (tableError) {

@@ -219,7 +219,7 @@ export default function UnifiedBusinessDataPage() {
                                                                                     </tr>
                                                                                 </thead>
                                                                                 <tbody className="bg-white divide-y divide-gray-200">
-                                                                                    {table.sample_data.slice(0, 100).map((row, rowIdx) => (
+                                                                                    {table.sample_data.map((row, rowIdx) => (
                                                                                         <tr key={rowIdx} className="hover:bg-blue-50 transition-colors">
                                                                                             <td className="px-2 py-1 text-center text-xs font-medium text-gray-500 border-r border-gray-300 bg-gray-50 sticky left-0 z-10">
                                                                                                 {rowIdx + 1}
@@ -247,7 +247,7 @@ export default function UnifiedBusinessDataPage() {
                                                                     <div className="mt-3 flex items-center justify-between px-2">
                                                                         <p className="text-xs text-gray-600">
                                                                             <span className="font-semibold">{table.record_count}</span> rows total
-                                                                            {table.sample_data.length > 100 && <span> • Showing first 100</span>}
+                                                                            <span> • Showing {table.sample_data.length} rows</span>
                                                                         </p>
                                                                         <p className="text-xs text-blue-600 italic">
                                                                             📖 Read-only view • Empty cells shown as <span className="text-gray-300">—</span>

@@ -1,0 +1,5 @@
+BP MACHINE
+Product no.,Brand,Units,Cost,Transport Cost,Final Cost,Cost per unit,Revenue,Unit Sold,Price per unit,Profit,Inventory
+1,AlpK2 Jap BP Monitor,37,68435.00,601.32,69036.32,1865.85,0.00,0,0.00,0.00,37
+2,BP Cuff Standard,25,13500.00,315.00,13815.00,552.60,15000.00,20,750.00,185.00,25
+3,Digital BP Starter Kit,10,5000.00,80.00,5080.00,508.00,7500.00,6,1250.00,2420.00,10

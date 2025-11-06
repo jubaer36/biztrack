@@ -1,0 +1,7 @@
+InvestorCode,FullName,MainContact,EmailAddr,Tel,Location,FirstInvestmentAmt,FirstInvestmentDate,TermsAndConditions,CurrentStatus
+INV-A1,Fashion Capital Partners,Alexandra Thompson,athompson@fashioncapital.com,+1-646-555-0401,"250 Park Ave, New York, NY 10177",600000,2022-06-01,18% equity stake - 6 year commitment,Active
+INV-A2,Retail Growth Fund,Benjamin Harper,bharper@retailgrowth.com,+1-415-555-0402,"100 California St, San Francisco, CA 94111",850000,2022-06-01,22% equity stake - 6 year commitment,Active
+INV-A3,Style Ventures LLC,Catherine Wong,cwong@styleventures.com,+1-212-555-0403,"450 Lexington Ave, New York, NY 10017",400000,2022-09-15,12% equity stake - 8 year commitment,Active
+INV-A4,Apparel Investment Group,Daniel Rodriguez,drodriguez@apparelgroup.com,+1-323-555-0404,"700 S Flower St, Los Angeles, CA 90017",300000,2023-01-10,10% equity stake - 5 year commitment,Active
+INV-A5,Prestige Equity Partners,Emma Sullivan,esullivan@prestigeequity.com,+1-617-555-0405,"100 Federal St, Boston, MA 02110",1200000,2023-04-20,28% equity stake - 10 year commitment,Active
+INV-A6,Angel Fashion Network,Frank Mitchell,fmitchell@angelfashion.com,+1-305-555-0406,"200 Brickell Ave, Miami, FL 33131",250000,2023-07-15,8% equity stake - 4 year commitment,Active
