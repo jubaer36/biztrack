@@ -124,7 +124,7 @@ const Dashboard = () => {
               title="Customer Insights"
               description="RFM segmentation and automated engagement campaigns"
               icon="customers"
-              href="/customers"
+              href="/customer-insights"
               gradient="from-primary/80 to-accent/80"
             />
             <FeatureCard
