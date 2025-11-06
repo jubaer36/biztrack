@@ -82,7 +82,7 @@ router.get('/products/:businessId', authenticateToken, async (req, res) => {
             });
         }
 
-        const { data, error } = await supabaseAdmin
+        let { data, error } = await supabaseAdmin
             .from('product')
             .select(`
                 product_id,
@@ -96,15 +96,39 @@ router.get('/products/:businessId', authenticateToken, async (req, res) => {
                 product_brand(brand_name)
             `)
             .eq('business_id', businessId)
-            .eq('status', 'active')
             .order('product_name', { ascending: true });
 
         if (error) {
+            console.error('Supabase error:', error);
             throw error;
         }
 
+        // Group products by name, brand, and category
+        const groupedProducts = {};
+        data.forEach(product => {
+            const key = `${product.product_name}-${product.brand_id}-${product.category_id}`;
+            if (!groupedProducts[key]) {
+                groupedProducts[key] = {
+                    product_name: product.product_name,
+                    brand_name: product.product_brand?.brand_name || 'Unknown Brand',
+                    category_name: product.product_category?.category_name || 'Unknown Category',
+                    selling_price: product.selling_price,
+                    price: product.price,
+                    brand_id: product.brand_id,
+                    category_id: product.category_id,
+                    stock_count: 0,
+                    product_ids: []
+                };
+            }
+            groupedProducts[key].stock_count += 1;
+            groupedProducts[key].product_ids.push(product.product_id);
+        });
+
+        // Convert to array
+        const products = Object.values(groupedProducts);
+
         res.json({
-            products: data
+            products
         });
     } catch (error) {
         console.error('Error fetching products:', error);
@@ -243,7 +267,6 @@ router.post('/:businessId', authenticateToken, async (req, res) => {
             sales_order_id: salesOrder.sales_order_id,
             business_id: businessId,
             product_id: item.product_id,
-            quantity: item.quantity,
             line_total: item.line_total
         }));
 
@@ -293,9 +316,7 @@ router.get('/:businessId', authenticateToken, async (req, res) => {
                     phone
                 ),
                 sales_order_items (
-                    sales_order_item_id,
                     product_id,
-                    quantity,
                     line_total,
                     product:product_id (
                         product_name,
