@@ -1,0 +1,26 @@
+Priority,Order,Category,Products,Amount,Status,Order date,Arrive by,Cost,Point of contact,Notes
+P0,PO001,Electronics,Sony WH-1000XM4,30 units,Ordered,2025-10-01,2025-10-15,2500.00,john@techsupply.com,Urgent restock of headphones
+P1,PO002,Clothing,Cotton T-Shirts,120 units,Approved,2025-10-02,2025-10-20,1800.00,sarah@globaltextiles.com,Bulk t-shirt order
+P2,PO003,Home & Garden,Stainless Steel Water Bottles,50 units,Shipped,2025-09-28,2025-10-10,1200.00,mike@homegoods.com,Water bottles and plant pots
+P3,PO004,Sports & Fitness,Yoga Mats,75 units,Delivered,2025-09-25,2025-10-05,2200.00,lisa@sportequip.com,Yoga mats and resistance bands
+P0,PO005,Books,Paperback Novels,100 units,Ordered,2025-10-03,2025-10-12,800.00,david@bookworld.com,New cookbook releases
+P1,PO006,Electronics,LED Desk Lamps,40 units,Approved,2025-10-01,2025-10-18,1500.00,anna@electromart.com,LED lamps and wireless mice
+P2,PO007,Clothing,Wool Sweaters,35 units,Shipped,2025-09-30,2025-10-08,2100.00,mark@fashionforward.com,Sweaters and hoodies
+P3,PO008,Home & Garden,Ceramic Plant Pots,60 units,Delivered,2025-09-27,2025-10-03,950.00,emma@gardens.com,Herb garden kits
+P1,PO009,Sports & Fitness,Dumbbells Set - 5kg,45 units,Approved,2025-10-04,2025-10-22,3000.00,ryan@fitlife.com,Dumbbells and tennis rackets
+P2,PO010,Books,Science Fiction Novels,80 units,Shipped,2025-10-02,2025-10-11,650.00,sophia@literary.com,Science fiction novels
+P3,PO011,Electronics,Bluetooth Speakers,25 units,Delivered,2025-09-29,2025-10-07,1800.00,chris@gadgethub.com,Bluetooth speakers
+P0,PO012,Clothing,Denim Jeans,50 units,Ordered,2025-10-05,2025-10-14,2400.00,julia@apparelsource.com,Denim jeans bulk order
+P1,PO013,Home & Garden,Wall Clocks,40 units,Approved,2025-10-03,2025-10-19,1100.00,alex@homeplus.com,Wall clocks and decor
+P2,PO014,Sports & Fitness,Running Shoes,30 units,Shipped,2025-10-01,2025-10-09,1600.00,taylor@activewear.com,Running shoes
+P3,PO015,Books,Biography Books,70 units,Delivered,2025-09-30,2025-10-06,750.00,jordan@booknook.com,Biography books
+P1,PO016,Electronics,USB-C Cables,150 units,Approved,2025-10-06,2025-10-23,1300.00,morgan@electro.com,USB cables and accessories
+P2,PO017,Clothing,Cotton Hoodies,45 units,Shipped,2025-10-04,2025-10-12,1900.00,cameron@stylemasters.com,Cotton hoodies
+P3,PO018,Home & Garden,Garden Hoses,35 units,Delivered,2025-10-02,2025-10-10,1400.00,reese@greenthumb.com,Garden hoses and pots
+P0,PO019,Sports & Fitness,Yoga Blocks,90 units,Ordered,2025-10-07,2025-10-16,2800.00,casey@profitness.com,Yoga blocks and bands
+P1,PO020,Books,Paperback Novels,110 units,Approved,2025-10-05,2025-10-21,900.00,skylar@pageturner.com,Paperback novels
+P2,PO021,Electronics,Smartphone Cases,80 units,Shipped,2025-10-03,2025-10-13,2000.00,riley@techinnovate.com,Smartphone cases
+P3,PO022,Clothing,T-Shirts and Jeans,55 units,Delivered,2025-10-01,2025-10-08,1700.00,devin@textiletraders.com,T-shirts and jeans
+P1,PO023,Home & Garden,Home Decor Items,30 units,Approved,2025-10-08,2025-10-24,1250.00,avery@decormasters.com,Home decor items
+P2,PO024,Sports & Fitness,Fitness Equipment,20 units,Shipped,2025-10-06,2025-10-15,2400.00,payton@endurancesports.com,Fitness equipment
+P3,PO025,Books,Cookbooks and Biographies,65 units,Delivered,2025-10-04,2025-10-11,850.00,logan@bookworld.com,Cookbooks and biographies

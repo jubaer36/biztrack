@@ -69,7 +69,7 @@ class DataMapper {
         // Schema is defined in: database/migrations/003_create_merchandising_schema.sql
         this.unifiedSchema = {
             product_category: ['business_id', 'category_id', 'category_name', 'description'],
-            product_brand: ['business_id', 'brand_id', 'brand_name', 'description', 'unit_price'],
+            product_brand: ['business_id', 'brand_id', 'brand_name', 'description', 'unit_price'], // NOTE: No category_id in product_brand
             supplier: ['business_id', 'supplier_id', 'supplier_name', 'contact_person', 'email', 'phone', 'address'],
             customer: ['business_id', 'customer_id', 'customer_name', 'email', 'phone', 'billing_address', 'shipping_address', 'customer_type'],
             investor: ['business_id', 'investor_id', 'investor_name', 'contact_person', 'email', 'phone', 'address', 'initial_investment_date', 'investment_terms', 'status'],
@@ -87,6 +87,101 @@ class DataMapper {
             'amount', 'price', 'cost', 'total', 'revenue', 'income', 'expense', 'profit',
             'payment', 'cash', 'money', 'sale', 'purchase', 'investment', 'capital',
             'balance', 'debit', 'credit', 'transaction', 'billing', 'invoice'
+        ];
+        
+        // Enhanced field pattern recognition for common business data formats
+        this.fieldPatterns = {
+            // Inventory/Product patterns
+            inventory: {
+                id: ['item id', 'item_id', 'product id', 'product_id', 'sku'],
+                name: ['item name', 'item_name', 'product name', 'product_name', 'item', 'product'],
+                type: ['type', 'category', 'product type', 'item type'],
+                price: ['price', 'unit price', 'cost', 'selling price'],
+                stock: ['stock', 'quantity', 'qty', 'inventory', 'available'],
+                status: ['status', 'state', 'condition'],
+                notes: ['notes', 'note', 'remarks', 'description', 'comments']
+            },
+            // Vendor/Supplier patterns
+            vendor: {
+                name: ['vendor', 'vendor name', 'supplier', 'supplier name', 'supplier_name'],
+                type: ['vendor type', 'supplier type', 'type', 'category'],
+                contact: ['contact', 'contact person', 'contact_person', 'phone', 'email'],
+                address: ['address', 'location', 'office address'],
+                website: ['website', 'url', 'web'],
+                reliability: ['reliability', 'rating', 'performance', 'score'],
+                notes: ['notes', 'note', 'remarks', 'comments']
+            },
+            // Purchase Order patterns
+            purchase_order: {
+                priority: ['priority', 'urgency', 'importance'],
+                order: ['order', 'order number', 'order_number', 'po number', 'order id'],
+                category: ['category', 'type', 'classification'],
+                status: ['status', 'state', 'order status'],
+                order_date: ['order date', 'order_date', 'date', 'created date', 'purchase date'],
+                arrive_by: ['arrive by', 'arrive_by', 'delivery date', 'expected date', 'due date'],
+                cost: ['cost', 'total', 'amount', 'total cost', 'total_amount'],
+                contact: ['point of contact', 'contact', 'contact person', 'poc'],
+                notes: ['notes', 'note', 'remarks', 'comments']
+            },
+            // Sales Order patterns
+            sales_order: {
+                priority: ['priority', 'urgency', 'importance'],
+                order: ['order', 'order number', 'order_number', 'order id', 'sales order'],
+                product: ['product', 'item', 'product name', 'item name'],
+                status: ['status', 'state', 'order status'],
+                order_date: ['order date', 'order_date', 'date', 'created date', 'sale date'],
+                price: ['price', 'total', 'amount', 'sale price', 'total_amount'],
+                platform: ['sales platform', 'platform', 'channel', 'marketplace'],
+                contact: ['point of contact', 'contact', 'contact person', 'poc', 'customer'],
+                notes: ['notes', 'note', 'remarks', 'comments']
+            },
+            // Customer patterns
+            customer: {
+                name: ['customer', 'customer name', 'customer_name', 'client', 'buyer'],
+                email: ['email', 'e-mail', 'customer email'],
+                phone: ['phone', 'telephone', 'mobile', 'contact'],
+                address: ['address', 'location', 'billing address', 'shipping address'],
+                type: ['customer type', 'type', 'category']
+            }
+        };
+        
+        // Table detection rules based on field combinations
+        this.tableDetectionRules = [
+            {
+                table: 'product',
+                priority: 10,
+                requiredFields: ['name', 'price'],
+                optionalFields: ['stock', 'status', 'type', 'category'],
+                keywords: ['item', 'product', 'inventory', 'stock', 'sku']
+            },
+            {
+                table: 'supplier',
+                priority: 9,
+                requiredFields: ['name'],
+                optionalFields: ['contact', 'address', 'type', 'vendor'],
+                keywords: ['vendor', 'supplier', 'provider']
+            },
+            {
+                table: 'purchase_order',
+                priority: 8,
+                requiredFields: ['order', 'order_date'],
+                optionalFields: ['cost', 'status', 'supplier', 'arrive_by'],
+                keywords: ['purchase', 'po', 'order', 'buying']
+            },
+            {
+                table: 'sales_order',
+                priority: 8,
+                requiredFields: ['order', 'order_date'],
+                optionalFields: ['price', 'status', 'customer', 'product'],
+                keywords: ['sale', 'sales', 'selling', 'order']
+            },
+            {
+                table: 'customer',
+                priority: 7,
+                requiredFields: ['name'],
+                optionalFields: ['email', 'phone', 'address'],
+                keywords: ['customer', 'client', 'buyer']
+            }
         ];
     }
 
@@ -232,8 +327,13 @@ class DataMapper {
                 if (key === '_id') return; // Skip MongoDB ObjectId
 
                 if (!fieldMap.has(key)) {
+                    const normalizedFieldName = this.normalizeFieldName(key);
+                    const fieldCategory = this.categorizeField(key);
+                    
                     fieldMap.set(key, {
                         fieldName: key,
+                        normalizedName: normalizedFieldName,
+                        fieldCategory: fieldCategory,
                         dataType: this.inferDataType(value),
                         sampleValues: [],
                         isCashFlowRelated: this.isCashFlowField(key)
@@ -241,13 +341,47 @@ class DataMapper {
                 }
 
                 const fieldInfo = fieldMap.get(key);
-                if (fieldInfo.sampleValues.length < 3 && value !== null && value !== undefined) {
+                if (fieldInfo.sampleValues.length < 5 && value !== null && value !== undefined) {
                     fieldInfo.sampleValues.push(String(value).slice(0, 100)); // Limit length
                 }
             });
         });
 
         return Array.from(fieldMap.values());
+    }
+    
+    /**
+     * Normalize field names for better matching (handle spaces, cases, etc.)
+     */
+    normalizeFieldName(fieldName) {
+        return fieldName
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_]/g, '');
+    }
+    
+    /**
+     * Categorize field based on pattern matching
+     */
+    categorizeField(fieldName) {
+        const normalized = this.normalizeFieldName(fieldName);
+        
+        // Check each pattern category
+        for (const [category, patterns] of Object.entries(this.fieldPatterns)) {
+            for (const [fieldType, variants] of Object.entries(patterns)) {
+                for (const variant of variants) {
+                    const normalizedVariant = this.normalizeFieldName(variant);
+                    if (normalized === normalizedVariant || 
+                        normalized.includes(normalizedVariant) || 
+                        normalizedVariant.includes(normalized)) {
+                        return { category, fieldType, matchedPattern: variant };
+                    }
+                }
+            }
+        }
+        
+        return { category: 'unknown', fieldType: 'unknown', matchedPattern: null };
     }
 
     /**
@@ -410,55 +544,381 @@ class DataMapper {
     fallbackRuleBasedMapping(collectionAnalysis) {
         const { fields, collectionName } = collectionAnalysis;
         
-        console.log('Applying rule-based mapping fallback...');
+        this.log('info', 'Applying enhanced rule-based mapping fallback');
         
-        // Simple heuristic-based table detection
-        let detectedTable = 'product'; // Default
-        let confidence = 0.5;
-        
-        const fieldNames = fields.map(f => f.fieldName.toLowerCase());
-        
-        // Detection rules
-        if (fieldNames.some(f => f.includes('customer') || f.includes('buyer'))) {
-            detectedTable = 'customer';
-            confidence = 0.7;
-        } else if (fieldNames.some(f => f.includes('supplier') || f.includes('vendor'))) {
-            detectedTable = 'supplier';
-            confidence = 0.7;
-        } else if (fieldNames.some(f => f.includes('sale') || f.includes('order'))) {
-            detectedTable = 'sales_order';
-            confidence = 0.65;
-        } else if (fieldNames.some(f => f.includes('purchase'))) {
-            detectedTable = 'purchase_order';
-            confidence = 0.65;
-        } else if (fieldNames.some(f => f.includes('product') || f.includes('item'))) {
-            detectedTable = 'product';
-            confidence = 0.6;
-        }
-        
-        // Create basic field mappings
-        const fieldMappings = fields.map(field => {
-            const targetField = this.guessTargetField(field.fieldName, detectedTable);
+        // Score each table based on field matches
+        const tableScores = this.tableDetectionRules.map(rule => {
+            let score = 0;
+            let matchedFields = [];
+            
+            // Check required fields
+            for (const requiredField of rule.requiredFields) {
+                const match = fields.find(f => {
+                    const category = f.fieldCategory?.fieldType || '';
+                    const normalized = f.normalizedName || this.normalizeFieldName(f.fieldName);
+                    return category === requiredField || normalized.includes(requiredField);
+                });
+                
+                if (match) {
+                    score += 10;
+                    matchedFields.push(match.fieldName);
+                } else {
+                    score -= 5; // Penalty for missing required field
+                }
+            }
+            
+            // Check optional fields
+            for (const optionalField of rule.optionalFields) {
+                const match = fields.find(f => {
+                    const category = f.fieldCategory?.fieldType || '';
+                    const normalized = f.normalizedName || this.normalizeFieldName(f.fieldName);
+                    return category === optionalField || normalized.includes(optionalField);
+                });
+                
+                if (match) {
+                    score += 3;
+                    matchedFields.push(match.fieldName);
+                }
+            }
+            
+            // Check collection name for keywords
+            const lowerCollectionName = collectionName.toLowerCase();
+            for (const keyword of rule.keywords) {
+                if (lowerCollectionName.includes(keyword)) {
+                    score += 5;
+                }
+            }
+            
+            // Check field names for keywords
+            const fieldNamesLower = fields.map(f => f.fieldName.toLowerCase()).join(' ');
+            for (const keyword of rule.keywords) {
+                if (fieldNamesLower.includes(keyword)) {
+                    score += 2;
+                }
+            }
+            
             return {
-                source_field: field.fieldName,
-                target_field: targetField,
-                confidence: 0.5,
-                transformation_needed: field.dataType === 'date' ? 'date_format' : 'none'
+                table: rule.table,
+                score: score,
+                priority: rule.priority,
+                matchedFields: matchedFields
             };
-        }).filter(m => m.target_field);
+        });
+        
+        // Sort by score and priority
+        tableScores.sort((a, b) => {
+            if (a.score === b.score) return b.priority - a.priority;
+            return b.score - a.score;
+        });
+        
+        const bestMatch = tableScores[0];
+        const detectedTable = bestMatch.score > 0 ? bestMatch.table : 'product';
+        const confidence = Math.min(0.95, Math.max(0.4, bestMatch.score / 30));
+        
+        this.log('info', `Rule-based detection selected: ${detectedTable}`, {
+            confidence: confidence.toFixed(2),
+            score: bestMatch.score,
+            matchedFields: bestMatch.matchedFields.length,
+            topScores: tableScores.slice(0, 3).map(s => ({ table: s.table, score: s.score }))
+        });
+        
+        // Create enhanced field mappings using pattern recognition
+        const fieldMappings = [];
+        const unmappedFields = [];
+        
+        for (const field of fields) {
+            const targetField = this.intelligentFieldMapping(field, detectedTable);
+            
+            if (targetField) {
+                fieldMappings.push({
+                    source_field: field.fieldName,
+                    target_field: targetField.name,
+                    confidence: targetField.confidence,
+                    transformation_needed: this.determineTransformation(field.dataType, targetField.name),
+                    mapping_method: 'pattern_recognition'
+                });
+            } else {
+                unmappedFields.push({
+                    field_name: field.fieldName,
+                    reason: 'No matching target field found in schema',
+                    suggestions: this.suggestAlternatives(field, detectedTable)
+                });
+            }
+        }
         
         return {
             tables: [{
                 table_name: detectedTable,
                 confidence: confidence,
-                reasoning: `Rule-based fallback mapping detected ${detectedTable} based on field names`,
+                reasoning: `Rule-based mapping with pattern recognition. Matched ${bestMatch.matchedFields.length} key fields. Score: ${bestMatch.score}`,
                 field_mappings: fieldMappings,
-                relationships: []
+                relationships: this.inferRelationships(detectedTable, fieldMappings)
             }],
-            unmapped_fields: fields
-                .filter(f => !fieldMappings.find(m => m.source_field === f.fieldName))
-                .map(f => ({ field_name: f.fieldName, reason: 'No clear mapping found' }))
+            unmapped_fields: unmappedFields
         };
+    }
+    
+    /**
+     * Intelligent field mapping using pattern recognition and schema knowledge
+     */
+    intelligentFieldMapping(field, tableName) {
+        const schemaFields = this.unifiedSchema[tableName];
+        if (!schemaFields) return null;
+        
+        const normalized = field.normalizedName || this.normalizeFieldName(field.fieldName);
+        const category = field.fieldCategory;
+        
+        // Priority 1: Direct match in schema
+        for (const schemaField of schemaFields) {
+            if (schemaField === 'business_id') continue; // Skip auto-added field
+            
+            const normalizedSchema = this.normalizeFieldName(schemaField);
+            if (normalized === normalizedSchema) {
+                return { name: schemaField, confidence: 0.95 };
+            }
+        }
+        
+        // Priority 2: Use field category from pattern matching
+        if (category && category.category !== 'unknown') {
+            const mappingRules = {
+                // Inventory patterns to Product table
+                inventory: {
+                    id: 'product_id',
+                    name: 'product_name',
+                    type: 'category_id',
+                    price: 'price',
+                    stock: null, // Not in schema
+                    status: 'status',
+                    notes: 'description'
+                },
+                // Vendor patterns to Supplier table
+                vendor: {
+                    name: 'supplier_name',
+                    type: null,
+                    contact: 'contact_person',
+                    address: 'address',
+                    website: null,
+                    reliability: null,
+                    notes: null
+                },
+                // Purchase Order patterns
+                purchase_order: {
+                    priority: null,
+                    order: 'purchase_order_id',
+                    category: null,
+                    status: 'status',
+                    order_date: 'order_date',
+                    arrive_by: 'delivery_date',
+                    cost: 'total_amount',
+                    contact: null,
+                    notes: 'notes'
+                },
+                // Sales Order patterns
+                sales_order: {
+                    priority: null,
+                    order: 'sales_order_id',
+                    product: 'customer_id', // Need to link to customer
+                    status: 'status',
+                    order_date: 'order_date',
+                    price: 'total_amount',
+                    platform: null,
+                    contact: 'customer_id',
+                    notes: null
+                },
+                // Customer patterns
+                customer: {
+                    name: 'customer_name',
+                    email: 'email',
+                    phone: 'phone',
+                    address: 'billing_address',
+                    type: 'customer_type'
+                }
+            };
+            
+            const tableMapping = mappingRules[category.category];
+            if (tableMapping && tableMapping[category.fieldType]) {
+                const targetField = tableMapping[category.fieldType];
+                if (schemaFields.includes(targetField)) {
+                    return { name: targetField, confidence: 0.85 };
+                }
+            }
+        }
+        
+        // Priority 3: Fuzzy matching with schema fields
+        let bestMatch = null;
+        let bestScore = 0;
+        
+        for (const schemaField of schemaFields) {
+            if (schemaField === 'business_id') continue;
+            
+            const normalizedSchema = this.normalizeFieldName(schemaField);
+            const score = this.calculateSimilarity(normalized, normalizedSchema);
+            
+            if (score > bestScore && score > 0.6) {
+                bestScore = score;
+                bestMatch = schemaField;
+            }
+        }
+        
+        if (bestMatch) {
+            return { name: bestMatch, confidence: Math.min(0.8, bestScore) };
+        }
+        
+        // Priority 4: Semantic matching for common patterns
+        const semanticMappings = {
+            // ID fields
+            'id': tableName === 'product' ? 'product_id' : 
+                  tableName === 'supplier' ? 'supplier_id' :
+                  tableName === 'customer' ? 'customer_id' : null,
+            // Name fields
+            'name': tableName === 'product' ? 'product_name' :
+                    tableName === 'supplier' ? 'supplier_name' :
+                    tableName === 'customer' ? 'customer_name' : null,
+            // Amount/Price fields
+            'amount': tableName.includes('order') ? 'total_amount' : 'price',
+            'total': 'total_amount',
+            'cost': tableName === 'product' ? 'price' : 'total_amount',
+            'price': tableName === 'product' ? 'selling_price' : 'total_amount',
+            // Date fields
+            'date': 'order_date',
+            // Status fields
+            'status': 'status',
+            // Description/Notes
+            'description': 'description',
+            'notes': tableName === 'purchase_order' ? 'notes' : 'description',
+            'remarks': 'description'
+        };
+        
+        for (const [pattern, targetField] of Object.entries(semanticMappings)) {
+            if (normalized.includes(pattern) && targetField && schemaFields.includes(targetField)) {
+                return { name: targetField, confidence: 0.7 };
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Calculate string similarity score (0-1)
+     */
+    calculateSimilarity(str1, str2) {
+        if (str1 === str2) return 1.0;
+        if (str1.includes(str2) || str2.includes(str1)) return 0.8;
+        
+        // Levenshtein-based similarity
+        const longer = str1.length > str2.length ? str1 : str2;
+        const shorter = str1.length > str2.length ? str2 : str1;
+        
+        if (longer.length === 0) return 1.0;
+        
+        const editDistance = this.levenshteinDistance(str1, str2);
+        return (longer.length - editDistance) / longer.length;
+    }
+    
+    /**
+     * Calculate Levenshtein distance between two strings
+     */
+    levenshteinDistance(str1, str2) {
+        const matrix = [];
+        
+        for (let i = 0; i <= str2.length; i++) {
+            matrix[i] = [i];
+        }
+        
+        for (let j = 0; j <= str1.length; j++) {
+            matrix[0][j] = j;
+        }
+        
+        for (let i = 1; i <= str2.length; i++) {
+            for (let j = 1; j <= str1.length; j++) {
+                if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j] + 1
+                    );
+                }
+            }
+        }
+        
+        return matrix[str2.length][str1.length];
+    }
+    
+    /**
+     * Suggest alternative mappings for unmapped fields
+     */
+    suggestAlternatives(field, tableName) {
+        const schemaFields = this.unifiedSchema[tableName];
+        if (!schemaFields) return [];
+        
+        const normalized = field.normalizedName || this.normalizeFieldName(field.fieldName);
+        const suggestions = [];
+        
+        for (const schemaField of schemaFields) {
+            if (schemaField === 'business_id') continue;
+            
+            const normalizedSchema = this.normalizeFieldName(schemaField);
+            const similarity = this.calculateSimilarity(normalized, normalizedSchema);
+            
+            if (similarity > 0.4) {
+                suggestions.push({
+                    field: schemaField,
+                    similarity: similarity.toFixed(2)
+                });
+            }
+        }
+        
+        return suggestions.sort((a, b) => b.similarity - a.similarity).slice(0, 3);
+    }
+    
+    /**
+     * Determine transformation needed for field
+     */
+    determineTransformation(sourceType, targetField) {
+        if (sourceType === 'date' && targetField.includes('date')) {
+            return 'date_format';
+        }
+        if (sourceType === 'numeric' && (targetField.includes('price') || targetField.includes('amount'))) {
+            return 'currency_format';
+        }
+        if (targetField.includes('_id') && sourceType === 'text') {
+            return 'id_generation';
+        }
+        return 'none';
+    }
+    
+    /**
+     * Infer relationships between tables based on field mappings
+     */
+    inferRelationships(tableName, fieldMappings) {
+        const relationships = [];
+        
+        // Check for foreign key fields
+        const fkPatterns = {
+            'supplier_id': { related_table: 'supplier', relationship_type: 'foreign_key' },
+            'customer_id': { related_table: 'customer', relationship_type: 'foreign_key' },
+            'product_id': { related_table: 'product', relationship_type: 'foreign_key' },
+            'category_id': { related_table: 'product_category', relationship_type: 'foreign_key' },
+            'brand_id': { related_table: 'product_brand', relationship_type: 'foreign_key' },
+            'investor_id': { related_table: 'investor', relationship_type: 'foreign_key' }
+        };
+        
+        for (const mapping of fieldMappings) {
+            if (fkPatterns[mapping.target_field]) {
+                const relation = fkPatterns[mapping.target_field];
+                if (relation.related_table !== tableName) {
+                    relationships.push({
+                        related_table: relation.related_table,
+                        relationship_type: relation.relationship_type,
+                        key: mapping.target_field
+                    });
+                }
+            }
+        }
+        
+        return relationships;
     }
 
     /**
@@ -501,9 +961,24 @@ class DataMapper {
     createMappingPrompt(collectionAnalysis) {
         const { fields, sampleData, collectionName } = collectionAnalysis;
 
-        const fieldDescriptions = fields.map(field =>
-            `- ${field.fieldName} (${field.dataType}): Example values: [${field.sampleValues.join(', ')}]${field.isCashFlowRelated ? ' [💰 CASH_FLOW_RELATED]' : ''}`
-        ).join('\n');
+        const fieldDescriptions = fields.map(field => {
+            let desc = `- ${field.fieldName} (${field.dataType})`;
+            
+            // Add pattern recognition info if available
+            if (field.fieldCategory && field.fieldCategory.category !== 'unknown') {
+                desc += ` [${field.fieldCategory.category}:${field.fieldCategory.fieldType}]`;
+            }
+            
+            // Add sample values
+            desc += `: Example values: [${field.sampleValues.join(', ')}]`;
+            
+            // Add cash flow indicator
+            if (field.isCashFlowRelated) {
+                desc += ' [💰 CASH_FLOW_RELATED]';
+            }
+            
+            return desc;
+        }).join('\n');
 
         const sampleDataStr = sampleData.slice(0, 3).map((doc, idx) => {
             const cleanDoc = { ...doc };
@@ -519,7 +994,7 @@ class DataMapper {
         return `You are an expert in data modeling and schema normalization for small and medium business systems in Bangladesh.
 
 You are given:
-1️⃣ A set of unstructured business data extracted from MongoDB.
+1️⃣ A set of unstructured business data extracted from MongoDB (often from CSV imports).
 2️⃣ A unified relational schema (target structure) for standardized business analytics.
 
 Your job:
@@ -528,6 +1003,34 @@ Your job:
 - Support **multi-table mappings** (e.g., a collection may include both supplier info and purchase orders).
 - Suggest **relationship keys** (like supplier_id or product_id) when logical links are found.
 - **CRITICAL**: You can ONLY use column names from the schema below. DO NOT invent new column names.
+
+**Common CSV Data Patterns to Recognize:**
+
+🔹 **Inventory/Product CSVs**: 
+   - Fields: "Item ID", "Item name", "Type", "Price", "Stock", "Status", "Notes"
+   - Maps to: product table (product_id, product_name, category_id, price/selling_price, status, description)
+
+🔹 **Vendor/Supplier CSVs**:
+   - Fields: "Vendor", "Vendor type", "Contact", "Address", "Website", "Reliability", "Notes"
+   - Maps to: supplier table (supplier_name, contact_person, address)
+
+🔹 **Purchase Order CSVs**:
+   - Fields: "Priority", "Order", "Category", "Status", "Order date", "Arrive by", "Cost", "Point of contact", "Notes"
+   - Maps to: purchase_order table (purchase_order_id, order_date, delivery_date, status, total_amount, notes)
+
+🔹 **Sales Order CSVs**:
+   - Fields: "Priority", "Order", "Product", "Status", "Order date", "Price", "Sales platform", "Point of contact", "Notes"
+   - Maps to: sales_order table (sales_order_id, order_date, status, total_amount, customer_id)
+
+**Field Name Normalization Tips:**
+- "Item ID" / "Item name" → product_id / product_name
+- "Order" / "Order number" → sales_order_id or purchase_order_id (based on context)
+- "Cost" / "Price" / "Total" → total_amount (for orders) or price/selling_price (for products)
+- "Arrive by" / "Delivery date" → delivery_date
+- "Point of contact" → customer_id (sales) or supplier_id (purchase)
+- "Notes" / "Remarks" / "Description" → notes or description
+- "Vendor" / "Supplier" → supplier_name
+- "Status" / "State" → status
 
 ---
 ### ALLOWED SCHEMA TABLES AND COLUMNS
@@ -751,6 +1254,14 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
                     confidence: tableMapping.confidence
                 });
 
+                // Check if this is product table that needs hierarchy processing
+                if (tableMapping.table_name === 'product') {
+                    this.log('info', 'Detected product table - checking for hierarchy requirements');
+                    const hierarchyResult = await this.processProductHierarchy(businessId, allDocs, tableMapping);
+                    results.push(hierarchyResult);
+                    continue;
+                }
+
                 // Transform documents
                 this.log('progress', 'Transforming documents...');
                 const transformedDocs = allDocs
@@ -866,6 +1377,332 @@ CRITICAL: Return ONLY the JSON object above. Do not include explanatory text, ma
         } catch (err) {
             console.error('Error migrating multi-table data:', err);
             throw err;
+        }
+    }
+
+    /**
+     * Process product hierarchy: category → brand → individual products
+     * Handles CSV data where each item with Stock quantity creates multiple product records
+     */
+    async processProductHierarchy(businessId, documents, tableMapping) {
+        this.log('info', '🏗️  Starting product hierarchy processing', {
+            totalItems: documents.length
+        });
+
+        try {
+            const categories = new Map();
+            const brands = new Map();
+            const products = [];
+            
+            let totalUnitsToCreate = 0;
+
+            // Step 1: Extract unique categories and brands from documents
+            this.log('progress', 'Step 1/4: Analyzing product data structure');
+            
+            // Debug: Log first document fields
+            if (documents.length > 0) {
+                this.log('info', 'Sample document fields', {
+                    fields: Object.keys(documents[0]),
+                    sampleData: documents[0]
+                });
+            }
+            
+            for (const doc of documents) {
+                // Extract category (Type field) - try multiple field name variations
+                const categoryName = doc['Type'] || doc['type'] || doc['Category'] || doc['category'] ||
+                                    doc['Product Type'] || doc['product_type'] || doc['Item Type'] || doc['item_type'];
+                
+                if (categoryName && categoryName.trim() && !categories.has(categoryName)) {
+                    categories.set(categoryName, {
+                        category_name: categoryName,
+                        description: `Category: ${categoryName}`,
+                        business_id: businessId
+                        // category_id will be set from database (either existing or newly inserted)
+                    });
+                }
+
+                // Extract brand - use category name as brand name when brand not specified
+                const priceValue = doc['Price'] || doc['price'] || doc['Unit Price'] || doc['unit_price'];
+                
+                // Use category name as brand name (e.g., "Electronics", "Clothing")
+                if (categoryName && !brands.has(categoryName)) {
+                    brands.set(categoryName, {
+                        brand_name: categoryName,
+                        description: `Brand: ${categoryName}`,
+                        unit_price: priceValue ? this.parseMonetaryValue(String(priceValue)) : null,
+                        business_id: businessId
+                        // brand_id will be set from database (either existing or newly inserted)
+                    });
+                }
+
+                // Count stock for total products
+                const stockValue = doc['Stock'] || doc['stock'] || doc['Quantity'] || doc['quantity'];
+                const stock = parseInt(stockValue) || 1;
+                totalUnitsToCreate += stock;
+            }
+
+            this.log('success', 'Product structure analyzed', {
+                uniqueCategories: categories.size,
+                uniqueBrands: brands.size,
+                totalCSVItems: documents.length,
+                totalProductUnitsToCreate: totalUnitsToCreate
+            });
+
+            // Step 2: Insert categories (using INSERT...ON CONFLICT to handle duplicates)
+            this.log('progress', `Step 2/4: Creating ${categories.size} product categories`);
+            const categoryArray = Array.from(categories.values());
+            let categoriesInserted = 0;
+            
+            if (categoryArray.length > 0) {
+                // First, check for existing categories and reuse their IDs
+                const categoryNames = categoryArray.map(c => c.category_name);
+                const { data: existingCategories } = await supabaseAdmin
+                    .from('product_category')
+                    .select('category_id, category_name')
+                    .eq('business_id', businessId)
+                    .in('category_name', categoryNames);
+                
+                // Update Map with existing IDs
+                if (existingCategories && existingCategories.length > 0) {
+                    existingCategories.forEach(existing => {
+                        const cat = categories.get(existing.category_name);
+                        if (cat) {
+                            cat.category_id = existing.category_id;
+                            this.log('info', `Reusing existing category: ${existing.category_name} (ID: ${existing.category_id})`);
+                        }
+                    });
+                }
+                
+                // Insert only new categories
+                const newCategories = categoryArray.filter(cat => {
+                    return !existingCategories?.some(existing => existing.category_name === cat.category_name);
+                });
+                
+                if (newCategories.length > 0) {
+                    const { data: catData, error: catError } = await supabaseAdmin
+                        .from('product_category')
+                        .insert(newCategories)
+                        .select();
+
+                    if (catError) {
+                        this.log('error', 'Failed to insert categories', { error: catError.message });
+                        throw catError;
+                    } else {
+                        // Update Map with returned IDs from database
+                        if (catData && catData.length > 0) {
+                            catData.forEach(inserted => {
+                                const cat = categories.get(inserted.category_name);
+                                if (cat) {
+                                    cat.category_id = inserted.category_id;
+                                    this.log('info', `Created new category: ${inserted.category_name} (ID: ${inserted.category_id})`);
+                                }
+                            });
+                        }
+                        categoriesInserted = catData?.length || 0;
+                        this.log('success', `✓ ${categoriesInserted} new categories created`);
+                    }
+                } else {
+                    this.log('success', `✓ All categories already exist, reusing existing IDs`);
+                }
+                
+                categoriesInserted = categoryArray.length;
+            }
+
+            // Step 3: Insert brands (same deduplication logic as categories)
+            this.log('progress', `Step 3/4: Creating ${brands.size} product brands`);
+            const brandArray = Array.from(brands.values()).filter(b => b.brand_name); // Filter out nulls
+            let brandsInserted = 0;
+            
+            if (brandArray.length > 0) {
+                // Check for existing brands and reuse their IDs
+                const brandNames = brandArray.map(b => b.brand_name);
+                const { data: existingBrands } = await supabaseAdmin
+                    .from('product_brand')
+                    .select('brand_id, brand_name')
+                    .eq('business_id', businessId)
+                    .in('brand_name', brandNames);
+                
+                // Update Map with existing IDs
+                if (existingBrands && existingBrands.length > 0) {
+                    existingBrands.forEach(existing => {
+                        const brand = brands.get(existing.brand_name);
+                        if (brand) {
+                            brand.brand_id = existing.brand_id;
+                            this.log('info', `Reusing existing brand: ${existing.brand_name} (ID: ${existing.brand_id})`);
+                        }
+                    });
+                }
+                
+                // Insert only new brands
+                const newBrands = brandArray.filter(brand => {
+                    return !existingBrands?.some(existing => existing.brand_name === brand.brand_name);
+                });
+                
+                if (newBrands.length > 0) {
+                    const { data: brandData, error: brandError } = await supabaseAdmin
+                        .from('product_brand')
+                        .insert(newBrands)
+                        .select();
+
+                    if (brandError) {
+                        this.log('error', 'Failed to insert brands', { error: brandError.message });
+                        throw brandError;
+                    } else {
+                        // Update Map with returned IDs from database
+                        if (brandData && brandData.length > 0) {
+                            brandData.forEach(inserted => {
+                                const brand = brands.get(inserted.brand_name);
+                                if (brand) {
+                                    brand.brand_id = inserted.brand_id;
+                                    this.log('info', `Created new brand: ${inserted.brand_name} (ID: ${inserted.brand_id})`);
+                                }
+                            });
+                        }
+                        brandsInserted = brandData?.length || 0;
+                        this.log('success', `✓ ${brandsInserted} new brands created`);
+                    }
+                } else {
+                    this.log('success', `✓ All brands already exist, reusing existing IDs`);
+                }
+                
+                brandsInserted = brandArray.length;
+            }
+
+            // Step 4: Create individual product units
+            this.log('progress', `Step 4/4: Creating ${totalUnitsToCreate} individual product units`);
+            
+            let productUnitCounter = 0;
+            for (const doc of documents) {
+                const itemName = doc['Item name'] || doc['Item Name'] || doc['item_name'] || 
+                                doc['Product'] || doc['product'] || doc['Product name'] || doc['product_name'];
+                const categoryName = doc['Type'] || doc['type'] || doc['Category'] || doc['category'] ||
+                                    doc['Product Type'] || doc['product_type'] || doc['Item Type'] || doc['item_type'];
+                const stockValue = doc['Stock'] || doc['stock'] || doc['Quantity'] || doc['quantity'];
+                const stock = parseInt(stockValue) || 1;
+                const itemId = doc['Item ID'] || doc['Item Id'] || doc['item_id'] || doc['id'];
+                const price = doc['Price'] || doc['price'] || doc['Unit Price'] || doc['unit_price'];
+                const status = doc['Status'] || doc['status'] || 'Active';
+                const notes = doc['Notes'] || doc['notes'] || doc['Description'] || '';
+
+                if (!itemName) {
+                    this.log('warning', 'Skipping document without item name', { doc });
+                    continue;
+                }
+
+                // Get the actual IDs from the Maps (which now have the correct IDs after checking existing records)
+                const brand = categoryName ? brands.get(categoryName) : null;
+                const category = categoryName ? categories.get(categoryName) : null;
+                
+                const brandId = brand ? brand.brand_id : null;
+                const categoryId = category ? category.category_id : null;
+
+                // Validate that we have proper IDs before creating products
+                if (!brandId || !categoryId) {
+                    this.log('error', `Missing brand_id or category_id for item: ${itemName}`, {
+                        category: categoryName,
+                        brandId: brandId,
+                        categoryId: categoryId,
+                        brandInMap: brand ? 'yes' : 'no',
+                        categoryInMap: category ? 'yes' : 'no'
+                    });
+                    continue; // Skip this item
+                }
+
+                this.log('info', `Processing item: ${itemName}`, {
+                    category: categoryName,
+                    stock: stock,
+                    brandId: brandId,
+                    categoryId: categoryId,
+                    willCreate: stock + ' units'
+                });
+
+                // Create individual product records based on stock quantity
+                for (let unitNum = 1; unitNum <= stock; unitNum++) {
+                    productUnitCounter++;
+                    
+                    const product = {
+                        business_id: businessId,
+                        product_id: this.generateIdFromValue(`${itemId}_${itemName}_unit_${unitNum}`),
+                        product_name: `${itemName}`, // Use item name as product name
+                        description: notes || `${itemName} - Unit ${unitNum}`,
+                        brand_id: brandId,
+                        category_id: categoryId,
+                        price: price ? this.parseMonetaryValue(String(price)) : null,
+                        selling_price: price ? this.parseMonetaryValue(String(price)) : null,
+                        status: status,
+                        created_date: new Date().toISOString(),
+                        stored_location: null,
+                        expense: null,
+                        supplier_id: null
+                    };
+
+                    products.push(product);
+
+                    // Log progress every 100 units
+                    if (productUnitCounter % 100 === 0) {
+                        this.log('progress', `Created ${productUnitCounter}/${totalUnitsToCreate} product units`);
+                    }
+                }
+            }
+
+            this.log('success', `Generated ${products.length} individual product records`);
+
+            // Insert products in batches
+            const batchSize = 100;
+            let productsInserted = 0;
+            const totalBatches = Math.ceil(products.length / batchSize);
+
+            this.log('info', `Inserting ${products.length} products in ${totalBatches} batches`);
+
+            for (let i = 0; i < products.length; i += batchSize) {
+                const batch = products.slice(i, i + batchSize);
+                const batchNum = Math.floor(i / batchSize) + 1;
+
+                try {
+                    const { data, error } = await supabaseAdmin
+                        .from('product')
+                        .upsert(batch, { onConflict: 'product_id' })
+                        .select();
+
+                    if (error) {
+                        this.log('error', `Product batch ${batchNum} failed`, { 
+                            error: error.message,
+                            code: error.code 
+                        });
+                    } else {
+                        productsInserted += batch.length;
+                        this.log('success', `Batch ${batchNum}/${totalBatches} inserted (${productsInserted}/${products.length} total)`);
+                    }
+                } catch (err) {
+                    this.log('error', `Product batch ${batchNum} exception`, { error: err.message });
+                }
+            }
+
+            this.log('success', '🎉 Product hierarchy processing complete', {
+                categoriesCreated: categoriesInserted,
+                brandsCreated: brandsInserted,
+                productsCreated: productsInserted,
+                totalItems: documents.length,
+                successRate: `${((productsInserted / products.length) * 100).toFixed(1)}%`
+            });
+
+            return {
+                table: 'product',
+                success: true,
+                hierarchyProcessing: true,
+                categoriesCreated: categoriesInserted,
+                brandsCreated: brandsInserted,
+                totalTransformed: products.length,
+                insertedCount: productsInserted,
+                sourceItems: documents.length
+            };
+
+        } catch (error) {
+            this.log('error', 'Product hierarchy processing failed', {
+                error: error.message,
+                stack: error.stack
+            });
+            throw error;
         }
     }
 
