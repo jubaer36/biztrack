@@ -29,6 +29,14 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
     const [mapping, setMapping] = useState(false);
     const [clearing, setClearing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [mappingProgress, setMappingProgress] = useState<{
+        currentStep: number;
+        steps: string[];
+        completed: boolean;
+        cancellable: boolean;
+    } | null>(null);
+    const [abortController, setAbortController] = useState<AbortController | null>(null);
+    const [progressInterval, setProgressInterval] = useState<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (businessId) {
@@ -70,17 +78,61 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
             setMapping(true);
             setError(null);
 
+            // Initialize progress steps
+            const steps = [
+                'Analyzing Excel data structure...',
+                'Identifying data relationships...',
+                'Creating database schema...',
+                'Mapping data fields...',
+                'Storing data to Supabase...',
+                'Validating data integrity...',
+                'Finalizing mapping process...'
+            ];
+
+            setMappingProgress({
+                currentStep: 0,
+                steps,
+                completed: false,
+                cancellable: true
+            });
+
+            const controller = new AbortController();
+            setAbortController(controller);
+
             const token = localStorage.getItem('access_token');
+
+            // Simulate progress updates
+            const interval = setInterval(() => {
+                setMappingProgress(prev => {
+                    if (!prev) return prev;
+                    const nextStep = prev.currentStep + 1;
+                    if (nextStep >= prev.steps.length) {
+                        clearInterval(interval);
+                        return { ...prev, completed: true };
+                    }
+                    // Make non-cancellable when reaching "Storing data to Supabase..." (step 4)
+                    const isCancellable = nextStep < 4; // Steps 0-3 are cancellable, 4+ are not
+                    return { ...prev, currentStep: nextStep, cancellable: isCancellable };
+                });
+            }, 2000); // Update every 2 seconds
+
+            setProgressInterval(interval);
+
             const response = await fetch(`${API_BASE_URL}/mapping/map/${businessId}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
+                signal: controller.signal,
             });
+
+            clearInterval(interval);
 
             if (response.ok) {
                 const data = await response.json();
                 console.log('Mapping completed:', data);
+
+                setMappingProgress(prev => prev ? { ...prev, completed: true } : null);
                 
                 // Refresh status
                 await fetchMappingStatus();
@@ -97,7 +149,28 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
             setError('Network error while starting mapping');
         } finally {
             setMapping(false);
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                setProgressInterval(null);
+            }
+            setAbortController(null);
+            // Clear progress after a short delay
+            setTimeout(() => setMappingProgress(null), 2000);
         }
+    };
+
+    const cancelMapping = () => {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            setProgressInterval(null);
+        }
+        if (abortController) {
+            abortController.abort();
+            setAbortController(null);
+        }
+        setMapping(false);
+        setMappingProgress(null);
+        setError('Mapping cancelled by user');
     };
 
     const clearMappedData = async () => {
@@ -137,7 +210,7 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
     }
 
     return (
-        <div className="space-y-6">
+        <div className={`space-y-6 ${mapping ? 'pointer-events-none' : ''}`}>
             {/* Header */}
             <div className="bg-white shadow rounded-lg p-6">
                 <div className="flex items-center justify-between">
@@ -238,9 +311,20 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
                                 <button
                                     onClick={startMapping}
                                     disabled={mapping}
-                                    className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50 font-medium"
+                                    className={`flex-1 px-4 py-2 rounded-md font-medium transition-all duration-300 ${
+                                        mapping
+                                            ? 'bg-indigo-600 text-white animate-pulse cursor-not-allowed'
+                                            : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg'
+                                    }`}
                                 >
-                                    {mapping ? '🤖 AI Mapping & Storing to Supabase...' : '🚀 Start AI Mapping to Supabase'}
+                                    {mapping ? (
+                                        <div className="flex items-center justify-center space-x-2">
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                            <span>🤖 AI Mapping & Storing to Supabase...</span>
+                                        </div>
+                                    ) : (
+                                        '🚀 Start AI Mapping to Supabase'
+                                    )}
                                 </button>
                             )}
 
@@ -272,6 +356,69 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
                         )}
                     </div>
                 </>
+            )}
+
+            {/* Loading Overlay */}
+            {mapping && mappingProgress && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+                        <div className="text-center">
+                            <div className="mb-6">
+                                <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-600 border-t-transparent mx-auto"></div>
+                            </div>
+                            
+                            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                                🤖 AI Mapping in Progress
+                            </h3>
+                            
+                            <div className="space-y-3 mb-6">
+                                {mappingProgress.steps.map((step, index) => (
+                                    <div
+                                        key={index}
+                                        className={`flex items-center space-x-3 text-left ${
+                                            index < mappingProgress.currentStep
+                                                ? 'text-green-600'
+                                                : index === mappingProgress.currentStep
+                                                ? 'text-indigo-600 font-medium'
+                                                : 'text-gray-400'
+                                        }`}
+                                    >
+                                        <div className={`w-2 h-2 rounded-full ${
+                                            index < mappingProgress.currentStep
+                                                ? 'bg-green-500'
+                                                : index === mappingProgress.currentStep
+                                                ? 'bg-indigo-500 animate-pulse'
+                                                : 'bg-gray-300'
+                                        }`}></div>
+                                        <span className="text-sm">
+                                            {index < mappingProgress.currentStep && '✅ '}
+                                            {index === mappingProgress.currentStep && '🔄 '}
+                                            {step}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {mappingProgress.cancellable && (
+                                <div className="mb-4">
+                                    <button
+                                        onClick={cancelMapping}
+                                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                                    >
+                                        Cancel Mapping
+                                    </button>
+                                </div>
+                            )}
+                            
+                            <div className="text-sm text-gray-600">
+                                {mappingProgress.cancellable 
+                                    ? 'You can cancel this process before data storage begins.' 
+                                    : 'Please wait while we process your data...'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

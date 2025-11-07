@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import { MetricsCard } from "@/components/MetricsCard";
 import { QuickActions } from "@/components/QuickActions";
 import { FeatureCard } from "@/components/FeatureCard";
 import { ForecastChart } from "@/components/ForecastChart";
 import { CashFlowPrediction } from "@/components/CashFlowPrediction";
-import { DollarSign, TrendingUp, Package, Users, Menu, Sparkles, Bell, Settings } from "lucide-react";
+import { DollarSign, TrendingUp, Package, Users, Menu, Sparkles, Bell, Settings, Store, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from '@/lib/auth-context';
 
 interface Business {
     id: string;
@@ -19,37 +20,131 @@ interface Business {
     updated_at: string;
 }
 
-const Dashboard = () => {
-  const { user } = useAuth();
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [loadingBusinesses, setLoadingBusinesses] = useState(false);
+interface Business {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+}
 
-  const fetchBusinesses = async () => {
-    try {
-      setLoadingBusinesses(true);
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/businesses`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setBusinesses(data.businesses);
-      }
-    } catch (error) {
-      console.error('Error fetching businesses:', error);
-    } finally {
-      setLoadingBusinesses(false);
-    }
+interface DashboardMetrics {
+  totalRevenue: {
+    value: number;
+    change: string;
+    trend: string;
+    formatted: string;
   };
+  profitMargin: {
+    value: number;
+    change: string;
+    trend: string;
+    formatted: string;
+  };
+  inventoryValue: {
+    value: number;
+    itemsNeedingAttention: number;
+    trend: string;
+    formatted: string;
+  };
+  activeCustomers: {
+    value: number;
+    newCustomers: number;
+    trend: string;
+    formatted: string;
+  };
+}
+
+const Dashboard = () => {
+
+  
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [selectedBusiness, setSelectedBusiness] = useState<string>("");
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const [loadingMetrics, setLoadingMetrics] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth/login");
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     if (user) {
       fetchBusinesses();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (selectedBusiness) {
+      fetchMetrics();
+    }
+  }, [selectedBusiness]);
+
+  const fetchBusinesses = async () => {
+    try {
+      setLoadingBusinesses(true);
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/businesses`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch businesses");
+
+      const data = await response.json();
+      setBusinesses(data.businesses || []);
+      
+      // Auto-select first business if available
+      if (data.businesses && data.businesses.length > 0) {
+        setSelectedBusiness(data.businesses[0].id);
+      }
+    } catch (err) {
+      console.error("Error fetching businesses:", err);
+    } finally {
+      setLoadingBusinesses(false);
+    }
+  };
+
+  const fetchMetrics = async () => {
+    if (!selectedBusiness) return;
+
+    try {
+      setLoadingMetrics(true);
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/dashboard/metrics/${selectedBusiness}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch metrics");
+
+      const data = await response.json();
+      setMetrics(data.metrics);
+    } catch (err) {
+      console.error("Error fetching metrics:", err);
+    } finally {
+      setLoadingMetrics(false);
+    }
+  };
+
+  if (authLoading || loadingBusinesses) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
       {/* Header */}
@@ -74,7 +169,31 @@ const Dashboard = () => {
                 </p>
               </div>
             </div>
+            
+            {/* Business Selector - Right Side */}
             <div className="flex items-center gap-3">
+              {businesses.length > 0 ? (
+                <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-xl border-2 border-slate-200/50 shadow-sm">
+                  <Store className="h-5 w-5 text-slate-600" />
+                  <select
+                    value={selectedBusiness}
+                    onChange={(e) => setSelectedBusiness(e.target.value)}
+                    className="bg-transparent text-slate-900 font-medium focus:outline-none min-w-[200px]"
+                  >
+                    {businesses.map((business) => (
+                      <option key={business.id} value={business.id}>
+                        {business.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading businesses...</span>
+                </div>
+              )}
+              
               <Button variant="ghost" size="icon" className="relative hover:bg-blue-50">
                 <Bell className="h-5 w-5 text-slate-600" />
                 <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-gradient-to-br from-red-600 to-rose-600 border-2 border-white">
@@ -148,39 +267,69 @@ const Dashboard = () => {
               Key Performance Metrics
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MetricsCard
-            title="Total Revenue"
-            value="৳3.2L"
-            change="+12.5% from last month"
-            trend="up"
-            icon={DollarSign}
-            variant="success"
-          />
-          <MetricsCard
-            title="Profit Margin"
-            value="28.4%"
-            change="+2.1% improvement"
-            trend="up"
-            icon={TrendingUp}
-            variant="success"
-          />
-          <MetricsCard
-            title="Inventory Value"
-            value="৳1.8L"
-            change="3 items need attention"
-            trend="neutral"
-            icon={Package}
-            variant="warning"
-          />
-          <MetricsCard
-            title="Active Customers"
-            value="142"
-            change="+8 new this month"
-            trend="up"
-            icon={Users}
-          />
-          </div>
+          {loadingMetrics ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : businesses.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="max-w-md mx-auto">
+                <Store className="h-16 w-16 mx-auto mb-4 text-slate-400" />
+                <p className="text-xl font-bold text-slate-800 mb-2">No Businesses Found</p>
+                <p className="text-slate-600 mb-6">Create your first business to start tracking metrics</p>
+                <Button 
+                  onClick={() => router.push("/businesses")}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg"
+                >
+                  <Store className="h-4 w-4 mr-2" />
+                  Create Business
+                </Button>
+              </div>
+            </div>
+          ) : !selectedBusiness ? (
+            <div className="text-center py-20 text-slate-600">
+              <Store className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+              <p className="text-lg font-medium">Please select a business to view metrics</p>
+            </div>
+          ) : metrics ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <MetricsCard
+                title="Total Revenue"
+                value={metrics.totalRevenue.formatted}
+                change={`${parseFloat(metrics.totalRevenue.change) >= 0 ? '+' : ''}${metrics.totalRevenue.change}% from last month`}
+                trend={metrics.totalRevenue.trend as "up" | "down" | "neutral"}
+                icon={DollarSign}
+                variant="success"
+              />
+              <MetricsCard
+                title="Profit Margin"
+                value={metrics.profitMargin.formatted}
+                change={`${parseFloat(metrics.profitMargin.change) >= 0 ? '+' : ''}${metrics.profitMargin.change}% improvement`}
+                trend={metrics.profitMargin.trend as "up" | "down" | "neutral"}
+                icon={TrendingUp}
+                variant="success"
+              />
+              <MetricsCard
+                title="Inventory Value"
+                value={metrics.inventoryValue.formatted}
+                change={`${metrics.inventoryValue.itemsNeedingAttention} items need attention`}
+                trend={metrics.inventoryValue.trend as "up" | "down" | "neutral"}
+                icon={Package}
+                variant="warning"
+              />
+              <MetricsCard
+                title="Active Customers"
+                value={metrics.activeCustomers.formatted}
+                change={`+${metrics.activeCustomers.newCustomers} new this month`}
+                trend={metrics.activeCustomers.trend as "up" | "down" | "neutral"}
+                icon={Users}
+              />
+            </div>
+          ) : (
+            <div className="text-center py-20 text-slate-600">
+              <p>No metrics available</p>
+            </div>
+          )}
         </div>
 
         {/* Quick Actions */}
