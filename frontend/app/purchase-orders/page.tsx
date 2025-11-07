@@ -1048,8 +1048,8 @@ export default function RecordPurchasePage() {
 
       {/* Purchase Details Modal */}
       {showPurchaseDetails && selectedPurchase && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-2xl max-h-[80vh] overflow-y-auto bg-white">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -1114,8 +1114,8 @@ export default function RecordPurchasePage() {
 
       {/* Success Modal */}
       {showSuccessModal && lastRecordedPurchase && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md bg-white">
             <CardHeader>
               <CardTitle className="text-green-600">Purchase Recorded Successfully!</CardTitle>
             </CardHeader>
@@ -1127,7 +1127,7 @@ export default function RecordPurchasePage() {
                   Total: ${lastRecordedPurchase.purchase_order.total_amount.toFixed(2)}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {lastRecordedPurchase.items.length} item(s) added to inventory
+                  {lastRecordedPurchase.total_items_added} item(s) added to inventory
                 </p>
               </div>
               <Button onClick={() => setShowSuccessModal(false)} className="w-full">

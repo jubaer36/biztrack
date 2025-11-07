@@ -351,6 +351,87 @@ router.post('/brands/:businessId', authenticateToken, async (req, res) => {
     }
 });
 
+// Create products
+router.post('/products/:businessId', authenticateToken, async (req, res) => {
+    try {
+        const { businessId } = req.params;
+        const { product_name, category_id, brand_id, supplier_id, price, selling_price, quantity, description } = req.body;
+
+        // Verify business ownership
+        const ownershipCheck = await Business.verifyOwnership(businessId, req.user.id);
+        if (!ownershipCheck) {
+            return res.status(403).json({
+                error: 'Access denied'
+            });
+        }
+
+        // Validate required fields
+        if (!product_name || !product_name.trim()) {
+            return res.status(400).json({
+                error: 'Product name is required'
+            });
+        }
+
+        if (!category_id) {
+            return res.status(400).json({
+                error: 'Category ID is required'
+            });
+        }
+
+        if (!brand_id) {
+            return res.status(400).json({
+                error: 'Brand ID is required'
+            });
+        }
+
+        if (!quantity || quantity <= 0) {
+            return res.status(400).json({
+                error: 'Valid quantity is required'
+            });
+        }
+
+        // Create individual product instances
+        const productInstances = [];
+        for (let i = 0; i < quantity; i++) {
+            const instanceId = `PROD${Date.now()}${Math.random().toString(36).substr(2, 9).toUpperCase()}${i}`;
+            productInstances.push({
+                business_id: businessId,
+                product_id: instanceId,
+                product_name: product_name.trim(),
+                category_id: category_id,
+                brand_id: brand_id,
+                supplier_id: supplier_id || null,
+                price: price || 0,
+                selling_price: selling_price || (price * 1.2),
+                status: 'Active',
+                created_date: new Date().toISOString(),
+                expense: 0,
+                stored_location: 'Warehouse'
+            });
+        }
+
+        const { data, error } = await supabaseAdmin
+            .from('product')
+            .insert(productInstances)
+            .select();
+
+        if (error) {
+            throw error;
+        }
+
+        res.status(201).json({
+            message: `${quantity} product(s) created successfully`,
+            products: data,
+            total_created: data.length
+        });
+    } catch (error) {
+        console.error('Error creating products:', error);
+        res.status(500).json({
+            error: 'Internal server error while creating products'
+        });
+    }
+});
+
 // Create a new purchase order
 router.post('/:businessId', authenticateToken, async (req, res) => {
     try {
@@ -389,58 +470,35 @@ router.post('/:businessId', authenticateToken, async (req, res) => {
                 });
             }
 
-            // Get or create category
-            let categoryId = item.category_id;
-            if (item.category_id === 0 && item.category_name) {
-                // Create new category
-                const { data: newCategory, error: catError } = await supabaseAdmin
-                    .from('product_category')
-                    .insert([{
-                        business_id: businessId,
-                        category_name: item.category_name,
-                        description: ''
-                    }])
-                    .select()
-                    .single();
-
-                if (catError) throw catError;
-                categoryId = newCategory.category_id;
-            }
-
-            // Get or create brand
-            let brandId = item.brand_id;
-            if (item.brand_id === 0 && item.brand_name) {
-                // Create new brand
-                const { data: newBrand, error: brandError } = await supabaseAdmin
-                    .from('product_brand')
-                    .insert([{
-                        business_id: businessId,
-                        brand_name: item.brand_name,
-                        description: '',
-                        unit_price: item.unit_cost
-                    }])
-                    .select()
-                    .single();
-
-                if (brandError) throw brandError;
-                brandId = newBrand.brand_id;
-            }
-
-            // Check if products with this name/brand/category already exist
-            const { data: existingProducts, error: productError } = await supabaseAdmin
-                .from('product')
-                .select('product_id')
+            // Validate that category exists
+            const { data: category, error: catError } = await supabaseAdmin
+                .from('product_category')
+                .select('category_id')
+                .eq('category_id', item.category_id)
                 .eq('business_id', businessId)
-                .eq('product_name', item.product_name)
-                .eq('brand_id', brandId)
-                .eq('category_id', categoryId)
-                .limit(1);
+                .single();
 
-            if (productError) {
-                throw productError;
+            if (catError || !category) {
+                return res.status(400).json({
+                    error: `Category with ID ${item.category_id} not found`
+                });
             }
 
-            // Create individual product instances with unique product_ids
+            // Validate that brand exists
+            const { data: brand, error: brandError } = await supabaseAdmin
+                .from('product_brand')
+                .select('brand_id')
+                .eq('brand_id', item.brand_id)
+                .eq('business_id', businessId)
+                .single();
+
+            if (brandError || !brand) {
+                return res.status(400).json({
+                    error: `Brand with ID ${item.brand_id} not found`
+                });
+            }
+
+            // Create products for this item
             const productInstances = [];
             for (let i = 0; i < item.quantity; i++) {
                 const instanceId = `PROD${Date.now()}${Math.random().toString(36).substr(2, 9).toUpperCase()}${i}`;
@@ -448,8 +506,8 @@ router.post('/:businessId', authenticateToken, async (req, res) => {
                     business_id: businessId,
                     product_id: instanceId,
                     product_name: item.product_name,
-                    category_id: categoryId,
-                    brand_id: brandId,
+                    category_id: item.category_id,
+                    brand_id: item.brand_id,
                     supplier_id: supplier_id,
                     price: item.unit_cost,
                     selling_price: item.unit_cost * 1.2, // Default markup
@@ -472,8 +530,8 @@ router.post('/:businessId', authenticateToken, async (req, res) => {
             totalAmount += lineTotal;
 
             processedItems.push({
-                product_id: productInstances[0].product_id, // Use first instance's product_id for purchase order reference
-                brand_id: brandId,
+                product_instances: productInstances, // Store all created product instances
+                brand_id: item.brand_id,
                 quantity: item.quantity,
                 unit_cost: item.unit_cost,
                 line_total: lineTotal
@@ -499,24 +557,15 @@ router.post('/:businessId', authenticateToken, async (req, res) => {
             throw orderError;
         }
 
-        // Create purchase order items
-        const orderItems = processedItems.map(item => {
-            const baseItem = {
-                purchase_order_id: purchaseOrder.purchase_order_id,
-                business_id: businessId,
-                product_brand_id: item.brand_id, // Keep for backward compatibility
-                quantity_ordered: item.quantity,
-                unit_cost: item.unit_cost,
-                line_total: item.line_total
-            };
-
-            // Add product_id if the column exists (after migration)
-            if (item.product_id) {
-                baseItem.product_id = item.product_id;
-            }
-
-            return baseItem;
-        });
+        // Create purchase order items - grouped by brand as per original schema design
+        const orderItems = processedItems.map(item => ({
+            purchase_order_id: purchaseOrder.purchase_order_id,
+            business_id: businessId,
+            product_brand_id: item.brand_id, // Primary key field
+            quantity_ordered: item.quantity,
+            unit_cost: item.unit_cost,
+            line_total: item.line_total
+        }));
 
         const { error: itemsError } = await supabaseAdmin
             .from('purchase_order_items')
@@ -526,10 +575,14 @@ router.post('/:businessId', authenticateToken, async (req, res) => {
             throw itemsError;
         }
 
+        // Calculate total items added to inventory
+        const totalItemsAdded = processedItems.reduce((sum, item) => sum + item.quantity, 0);
+
         res.status(201).json({
             message: 'Purchase order created successfully',
             purchase_order: purchaseOrder,
-            items: orderItems
+            items: orderItems,
+            total_items_added: totalItemsAdded
         });
     } catch (error) {
         console.error('Error creating purchase order:', error);
