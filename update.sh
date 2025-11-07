@@ -8,6 +8,7 @@ echo "🔄 Updating BizTrack..."
 echo "📦 Installing backend dependencies..."
 sudo docker compose exec backend npm install
 
+
 echo "📦 Installing frontend dependencies..."
 sudo docker compose exec frontend npm install
 

@@ -6,7 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Package, AlertTriangle, TrendingDown, PackageCheck, Loader2, Store, Search, Filter, Sparkles } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ArrowLeft, Package, AlertTriangle, TrendingDown, PackageCheck, Loader2, Store, Search, Filter, Sparkles, Edit, Check, ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import "./inventory.css";
@@ -52,10 +57,12 @@ interface FilterOptions {
   categories: Array<{
     category_id: number;
     category_name: string;
+    product_count: number;
   }>;
   brands: Array<{
     brand_id: number;
     brand_name: string;
+    product_count: number;
   }>;
 }
 
@@ -84,6 +91,16 @@ const InventoryPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
+
+  // Dropdown open states
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
+
+  // Modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Partial<Product>>({});
+  const [savingProduct, setSavingProduct] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -204,6 +221,68 @@ const InventoryPage = () => {
     } finally {
       setLoadingProducts(false);
     }
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setEditingProduct({ ...product });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveProduct = async () => {
+    if (!selectedProduct || !selectedBusiness) return;
+
+    try {
+      setSavingProduct(true);
+      const token = localStorage.getItem("access_token");
+      
+      // Only send the editable fields
+      const updateData = {
+        description: editingProduct.description,
+        price: editingProduct.price,
+        selling_price: editingProduct.selling_price,
+        stored_location: editingProduct.stored_location,
+        expense: editingProduct.expense,
+      };
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/inventory/products/${selectedBusiness}/${selectedProduct.product_id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updateData),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to update product");
+
+      // Refresh products list
+      fetchProducts(pagination.page);
+      setIsEditModalOpen(false);
+      setSelectedProduct(null);
+      setEditingProduct({});
+    } catch (err) {
+      console.error("Error updating product:", err);
+      setError("Failed to update product");
+    } finally {
+      setSavingProduct(false);
+    }
+  };
+
+  // Helper functions for dropdown display
+  const getSelectedCategoryName = () => {
+    if (selectedCategory === "all") return "All Categories";
+    const category = filterOptions.categories.find(c => c.category_id.toString() === selectedCategory);
+    return category ? `${category.category_name} (${category.product_count})` : "All Categories";
+  };
+
+  const getSelectedBrandName = () => {
+    if (selectedBrand === "all") return "All Brands";
+    const brand = filterOptions.brands.find(b => b.brand_id.toString() === selectedBrand);
+    return brand ? `${brand.brand_name} (${brand.product_count})` : "All Brands";
   };
 
   if (authLoading || loadingBusinesses) {
@@ -369,33 +448,117 @@ const InventoryPage = () => {
                     </div>
                   </div>
                   
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue placeholder="All Categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {filterOptions.categories.map((category) => (
-                        <SelectItem key={category.category_id} value={category.category_id.toString()}>
-                          {category.category_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {/* Category Searchable Dropdown */}
+                  <Popover open={categoryDropdownOpen} onOpenChange={setCategoryDropdownOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={categoryDropdownOpen}
+                        className="w-full sm:w-[200px] justify-between"
+                      >
+                        {getSelectedCategoryName()}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full sm:w-[200px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search categories..." />
+                        <CommandList>
+                          <CommandEmpty>No categories found.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="all"
+                              onSelect={() => {
+                                setSelectedCategory("all");
+                                setCategoryDropdownOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  selectedCategory === "all" ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              All Categories
+                            </CommandItem>
+                            {filterOptions.categories.map((category) => (
+                              <CommandItem
+                                key={category.category_id}
+                                value={`${category.category_name} ${category.product_count}`}
+                                onSelect={() => {
+                                  setSelectedCategory(category.category_id.toString());
+                                  setCategoryDropdownOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${
+                                    selectedCategory === category.category_id.toString() ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                {category.category_name} ({category.product_count})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
 
-                  <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue placeholder="All Brands" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Brands</SelectItem>
-                      {filterOptions.brands.map((brand) => (
-                        <SelectItem key={brand.brand_id} value={brand.brand_id.toString()}>
-                          {brand.brand_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {/* Brand Searchable Dropdown */}
+                  <Popover open={brandDropdownOpen} onOpenChange={setBrandDropdownOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={brandDropdownOpen}
+                        className="w-full sm:w-[200px] justify-between"
+                      >
+                        {getSelectedBrandName()}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full sm:w-[200px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search brands..." />
+                        <CommandList>
+                          <CommandEmpty>No brands found.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="all"
+                              onSelect={() => {
+                                setSelectedBrand("all");
+                                setBrandDropdownOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  selectedBrand === "all" ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              All Brands
+                            </CommandItem>
+                            {filterOptions.brands.map((brand) => (
+                              <CommandItem
+                                key={brand.brand_id}
+                                value={`${brand.brand_name} ${brand.product_count}`}
+                                onSelect={() => {
+                                  setSelectedBrand(brand.brand_id.toString());
+                                  setBrandDropdownOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${
+                                    selectedBrand === brand.brand_id.toString() ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                {brand.brand_name} ({brand.product_count})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </CardHeader>
               
@@ -427,7 +590,11 @@ const InventoryPage = () => {
                         </TableHeader>
                         <TableBody>
                           {products.map((product) => (
-                            <TableRow key={product.product_id}>
+                            <TableRow 
+                              key={product.product_id} 
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => handleEditProduct(product)}
+                            >
                               <TableCell className="font-mono text-sm">{product.product_id}</TableCell>
                               <TableCell className="font-medium">{product.product_name}</TableCell>
                               <TableCell>{product.product_category?.category_name || '-'}</TableCell>
@@ -446,7 +613,20 @@ const InventoryPage = () => {
                                   {product.status || 'N/A'}
                                 </span>
                               </TableCell>
-                              <TableCell>{product.stored_location || '-'}</TableCell>
+                              <TableCell className="flex items-center justify-between">
+                                <span>{product.stored_location || '-'}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditProduct(product);
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -489,6 +669,169 @@ const InventoryPage = () => {
           </>
         )}
       </main>
+
+      {/* Edit Product Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background border shadow-xl">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>
+              Update product information and settings.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingProduct && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="product_id">Product ID</Label>
+                  <Input
+                    id="product_id"
+                    value={editingProduct.product_id || ''}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product_name">Product Name</Label>
+                  <Input
+                    id="product_name"
+                    value={editingProduct.product_name || ''}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={editingProduct.description || ''}
+                  onChange={(e) => setEditingProduct(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Cost Price</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    value={editingProduct.price || ''}
+                    onChange={(e) => setEditingProduct(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="selling_price">Selling Price</Label>
+                  <Input
+                    id="selling_price"
+                    type="number"
+                    step="0.01"
+                    value={editingProduct.selling_price || ''}
+                    onChange={(e) => setEditingProduct(prev => ({ ...prev, selling_price: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={editingProduct.status || ''}
+                    disabled
+                  >
+                    <SelectTrigger className="bg-muted">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="stored_location">Storage Location</Label>
+                  <Input
+                    id="stored_location"
+                    value={editingProduct.stored_location || ''}
+                    onChange={(e) => setEditingProduct(prev => ({ ...prev, stored_location: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="category_id">Category ID</Label>
+                  <Input
+                    id="category_id"
+                    type="number"
+                    value={editingProduct.category_id || ''}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brand_id">Brand ID</Label>
+                  <Input
+                    id="brand_id"
+                    type="number"
+                    value={editingProduct.brand_id || ''}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supplier_id">Supplier ID</Label>
+                  <Input
+                    id="supplier_id"
+                    type="number"
+                    value={editingProduct.supplier_id || ''}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="expense">Expense</Label>
+                <Input
+                  id="expense"
+                  type="number"
+                  step="0.01"
+                  value={editingProduct.expense || ''}
+                  onChange={(e) => setEditingProduct(prev => ({ ...prev, expense: parseFloat(e.target.value) || undefined }))}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              disabled={savingProduct}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveProduct}
+              disabled={savingProduct}
+            >
+              {savingProduct ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

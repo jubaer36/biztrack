@@ -556,27 +556,58 @@ router.get('/products/:businessId', authenticateUser, async (req, res) => {
 
         console.log(`[INVENTORY PRODUCTS] Total products count: ${count || 0}`);
 
-        // Fetch categories and brands for filter dropdowns
+        // Fetch categories and brands for filter dropdowns with product counts
         console.log(`[INVENTORY PRODUCTS] Fetching filter options...`);
+        
+        // Get categories with product counts
         const { data: categories } = await supabase
             .from('product_category')
-            .select('category_id, category_name')
-            .eq('business_id', businessId)
-            .order('category_name');
+            .select(`
+                category_id,
+                category_name,
+                product!inner(business_id)
+            `)
+            .eq('business_id', businessId);
 
+        // Aggregate category counts
+        const categoryCounts = {};
+        categories?.forEach(cat => {
+            const count = cat.product?.length || 0;
+            categoryCounts[cat.category_id] = {
+                category_id: cat.category_id,
+                category_name: cat.category_name,
+                product_count: count
+            };
+        });
+
+        // Get brands with product counts
         const { data: brands } = await supabase
             .from('product_brand')
-            .select('brand_id, brand_name')
-            .eq('business_id', businessId)
-            .order('brand_name');
+            .select(`
+                brand_id,
+                brand_name,
+                product!inner(business_id)
+            `)
+            .eq('business_id', businessId);
+
+        // Aggregate brand counts
+        const brandCounts = {};
+        brands?.forEach(brand => {
+            const count = brand.product?.length || 0;
+            brandCounts[brand.brand_id] = {
+                brand_id: brand.brand_id,
+                brand_name: brand.brand_name,
+                product_count: count
+            };
+        });
 
         console.log(`[INVENTORY PRODUCTS] Returning products data...`);
         res.json({
             success: true,
             products: products || [],
             filters: {
-                categories: categories || [],
-                brands: brands || []
+                categories: Object.values(categoryCounts),
+                brands: Object.values(brandCounts)
             },
             pagination: {
                 page: parseInt(page),
