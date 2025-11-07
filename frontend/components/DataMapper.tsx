@@ -192,7 +192,7 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
                     </div>
 
                     {/* Source Data (MongoDB Collections) */}
-                    {Object.keys(mappingStatus.mongoStatus).length > 0 && (
+                    {Object.keys(mappingStatus.mongoStatus).length > 0 && !mappingStatus.hasMappedData && (
                         <div className="bg-white shadow rounded-lg p-6">
                             <h3 className="text-base font-medium text-gray-900 mb-4">📊 Source Data (Excel Sheets)</h3>
                             <div className="space-y-3">

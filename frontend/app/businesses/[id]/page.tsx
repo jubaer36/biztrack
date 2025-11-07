@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import DataMapper from '@/components/DataMapper';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, Store, Upload, Database, FileSpreadsheet, Loader2, Edit, Trash2, Eye, EyeOff, Brain } from "lucide-react";
 
 interface Business {
     id: string;
@@ -229,6 +236,18 @@ export default function BusinessDetailPage() {
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
+        // Check if there's existing data and warn the user
+        if (sheetData.length > 0) {
+            const confirmed = confirm(
+                'Warning: Uploading new Excel files will remove all existing uploaded data for this business. This action cannot be undone.\n\nDo you want to continue?'
+            );
+            if (!confirmed) {
+                // Reset the file input
+                event.target.value = '';
+                return;
+            }
+        }
+
         try {
             setUploadingFiles(true);
             setUploadResults([]);
@@ -433,192 +452,219 @@ export default function BusinessDetailPage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <nav className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex items-center">
-                            <button
-                                onClick={() => router.push('/businesses')}
-                                className="text-indigo-600 hover:text-indigo-900 mr-4"
-                            >
-                                ← Back to Businesses
-                            </button>
-                            <h1 className="text-xl font-semibold text-gray-900">Business Details</h1>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            {/* Business Selector */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-600">Business:</span>
-                                <select
-                                    value={businessId}
-                                    onChange={(e) => {
-                                        if (e.target.value && e.target.value !== businessId) {
-                                            router.push(`/businesses/${e.target.value}`);
-                                        }
-                                    }}
-                                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                    disabled={loadingBusinesses}
-                                >
-                                    {loadingBusinesses ? (
-                                        <option>Loading...</option>
-                                    ) : (
-                                        businesses.map((biz) => (
-                                            <option key={biz.id} value={biz.id}>
-                                                {biz.name}
-                                            </option>
-                                        ))
-                                    )}
-                                </select>
+            {/* Header */}
+            <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+                <div className="container mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <Button variant="ghost" size="icon" onClick={() => router.push("/businesses")}>
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                            <div>
+                                <h1 className="text-2xl font-bold text-foreground">Business Details</h1>
+                                <p className="text-sm text-muted-foreground">Manage your business data and settings</p>
                             </div>
-                            <span className="text-gray-700">Welcome, {user.name || user.email}</span>
+                        </div>
+
+                        {/* Business Selector */}
+                        <div className="flex items-center gap-2">
+                            <Store className="h-5 w-5 text-muted-foreground" />
+                            <select
+                                value={businessId}
+                                onChange={(e) => {
+                                    if (e.target.value && e.target.value !== businessId) {
+                                        router.push(`/businesses/${e.target.value}`);
+                                    }
+                                }}
+                                className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-[200px] shadow-sm"
+                                disabled={loadingBusinesses}
+                            >
+                                {loadingBusinesses ? (
+                                    <option>Loading...</option>
+                                ) : (
+                                    businesses.map((biz) => (
+                                        <option key={biz.id} value={biz.id}>
+                                            {biz.name}
+                                        </option>
+                                    ))
+                                )}
+                            </select>
                         </div>
                     </div>
                 </div>
-            </nav>
+            </header>
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    {error && (
-                        <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
-                            <div className="flex">
-                                <div className="ml-3">
-                                    <p className="text-sm text-red-700">{error}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+            <main className="container mx-auto px-4 py-8 space-y-6">
+                {error && (
+                    <Card className="border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-white shadow-lg rounded-xl overflow-hidden">
+                        <CardContent className="pt-6">
+                            <p className="text-red-700 font-semibold">{error}</p>
+                        </CardContent>
+                    </Card>
+                )}
 
-                    {loadingBusiness ? (
-                        <div className="text-center py-12">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-                            <p className="mt-4 text-gray-600">Loading business...</p>
-                        </div>
-                    ) : business ? (
-                        <>
-                            <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-                                <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                {loadingBusiness ? (
+                    <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                ) : business ? (
+                    <>
+                        {/* Business Info Card */}
+                        <Card className="border-2 border-slate-200/50 bg-gradient-to-br from-white to-slate-50 shadow-xl rounded-xl overflow-hidden">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-lg font-medium text-gray-900">{business.name}</h2>
-                                        <p className="mt-1 text-sm text-gray-600">
+                                        <CardTitle className="text-xl font-bold text-slate-800">{business.name}</CardTitle>
+                                        <CardDescription className="text-slate-600 mt-1">
                                             {business.description || 'No description provided'}
-                                        </p>
+                                        </CardDescription>
                                     </div>
-                                    <div className="flex space-x-3">
-                                        <button
+                                    <div className="flex gap-3">
+                                        <Button
                                             onClick={openEditModal}
-                                            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                            variant="outline"
+                                            className="border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all duration-300"
                                         >
+                                            <Edit className="h-4 w-4 mr-2" />
                                             Edit Business
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             onClick={handleDeleteBusiness}
-                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                            className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-md"
                                         >
+                                            <Trash2 className="h-4 w-4 mr-2" />
                                             Delete Business
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             onClick={() => router.push(`/businesses/${businessId}/raw-data`)}
-                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md"
                                         >
+                                            <Database className="h-4 w-4 mr-2" />
                                             View Raw Data
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             onClick={() => router.push(`/businesses/${businessId}/unified-data`)}
-                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md"
                                         >
+                                            <Eye className="h-4 w-4 mr-2" />
                                             View Unified Data
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
-                            </div>
+                            </CardHeader>
+                        </Card>
 
-                            {/* Excel Upload Section */}
-                            <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-                                <div className="px-4 py-5 sm:px-6">
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">Upload Excel Files</h3>
-                                    <p className="text-sm text-gray-600 mb-4">
-                                        Upload Excel files (.xls, .xlsx) to create MongoDB collections. Each sheet will be converted to a separate collection with documents mapped from the rows and columns.
-                                    </p>
-                                    <div className="flex items-center space-x-4">
-                                        <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer">
-                                            <input
-                                                type="file"
-                                                multiple
-                                                accept=".xls,.xlsx,.xlsm"
-                                                onChange={handleFileUpload}
-                                                disabled={uploadingFiles}
-                                                className="hidden"
-                                            />
-                                            {uploadingFiles ? 'Uploading...' : 'Choose Excel Files'}
-                                        </label>
-                                        {sheetData.length > 0 && (
-                                            <button
-                                                onClick={handleDeleteAllData}
-                                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                                            >
-                                                Delete All Data
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* Upload Results */}
-                                    {uploadResults.length > 0 && (
-                                        <div className="mt-4">
-                                            <h4 className="text-sm font-medium text-gray-900 mb-2">Upload Results:</h4>
-                                            <div className="space-y-2">
-                                                {uploadResults.map((result, index) => (
-                                                    <div key={index} className={`p-3 rounded-md ${result.error ? 'bg-red-50' : 'bg-green-50'}`}>
-                                                        <p className={`text-sm font-medium ${result.error ? 'text-red-800' : 'text-green-800'}`}>
-                                                            {result.fileName}
-                                                        </p>
-                                                        {result.error ? (
-                                                            <p className="text-xs text-red-600 mt-1">{result.error}</p>
-                                                        ) : (
-                                                            <div className="text-xs text-green-700 mt-1">
-                                                                {result.sheets?.map((sheet, idx) => (
-                                                                    <div key={idx}>
-                                                                        Sheet &quot;{sheet.sheetName}&quot;: {sheet.rowCount} rows → {sheet.collectionName}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
+                        {/* Excel Upload Section */}
+                        <Card className="border-2 border-slate-200/50 bg-gradient-to-br from-white to-slate-50 shadow-xl rounded-xl overflow-hidden">
+                            <CardHeader>
+                                <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <Upload className="h-5 w-5 text-indigo-600" />
+                                    Upload Excel Files
+                                </CardTitle>
+                                <CardDescription className="text-slate-600">
+                                    Upload Excel files (.xls, .xlsx) to create MongoDB collections. Each sheet will be converted to a separate collection with documents mapped from the rows and columns.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer shadow-md">
+                                        <Upload className="h-4 w-4 mr-2" />
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept=".xls,.xlsx,.xlsm"
+                                            onChange={handleFileUpload}
+                                            disabled={uploadingFiles}
+                                            className="hidden"
+                                        />
+                                        {uploadingFiles ? 'Uploading...' : 'Choose Excel Files'}
+                                    </label>
+                                    {sheetData.length > 0 && (
+                                        <Button
+                                            onClick={handleDeleteAllData}
+                                            variant="outline"
+                                            className="border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white transition-all duration-300"
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete All Data
+                                        </Button>
                                     )}
                                 </div>
-                            </div>
 
-                            {/* AI Data Mapping Section */}
-                            <DataMapper 
-                                businessId={businessId} 
-                                onMappingComplete={() => {
-                                    // Refresh data when mapping completes
-                                    fetchBusinessData();
-                                }}
-                            />
-
-                            {/* Collections/Data Section */}
-                            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                                <div className="px-4 py-5 sm:px-6">
-                                    <h3 className="text-lg font-medium text-gray-900">Uploaded Data Collections</h3>
-                                    <p className="mt-1 text-sm text-gray-600">
-                                        View and manage your uploaded Excel data
-                                    </p>
-                                </div>
-                                <div className="border-t border-gray-200">
-                                    {loadingData ? (
-                                        <div className="text-center py-8">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                                            <p className="mt-2 text-sm text-gray-600">Loading data...</p>
+                                {/* Upload Results */}
+                                {uploadResults.length > 0 && (
+                                    <div className="mt-4">
+                                        <h4 className="text-sm font-medium text-gray-900 mb-2">Upload Results:</h4>
+                                        <div className="space-y-2">
+                                            {uploadResults.map((result, index) => (
+                                                <div key={index} className={`p-3 rounded-md ${result.error ? 'bg-red-50' : 'bg-green-50'}`}>
+                                                    <p className={`text-sm font-medium ${result.error ? 'text-red-800' : 'text-green-800'}`}>
+                                                        {result.fileName}
+                                                    </p>
+                                                    {result.error ? (
+                                                        <p className="text-xs text-red-600 mt-1">{result.error}</p>
+                                                    ) : (
+                                                        <div className="text-xs text-green-700 mt-1">
+                                                            {result.sheets?.map((sheet, idx) => (
+                                                                <div key={idx}>
+                                                                    Sheet &quot;{sheet.sheetName}&quot;: {sheet.rowCount} rows → {sheet.collectionName}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
-                                    ) : sheetData.length > 0 ? (
-                                        <div className="divide-y divide-gray-200">
-                                            {sheetData.map((sheet, index) => (
-                                                <div key={index} className="px-4 py-4 hover:bg-gray-50">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex-1">
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* AI Data Mapping Section */}
+                        <Card className="border-2 border-slate-200/50 bg-gradient-to-br from-white to-slate-50 shadow-xl rounded-xl overflow-hidden">
+                            <CardHeader>
+                                <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <Brain className="h-5 w-5 text-purple-600" />
+                                    AI Data Mapping
+                                </CardTitle>
+                                <CardDescription className="text-slate-600">
+                                    Use AI to automatically map and structure your uploaded data
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <DataMapper
+                                    businessId={businessId}
+                                    onMappingComplete={() => {
+                                        // Refresh data when mapping completes
+                                        fetchBusinessData();
+                                    }}
+                                />
+                            </CardContent>
+                        </Card>
+
+                        {/* Collections/Data Section */}
+                        <Card className="border-2 border-slate-200/50 bg-gradient-to-br from-white to-slate-50 shadow-xl rounded-xl overflow-hidden">
+                            <CardHeader>
+                                <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
+                                    Uploaded Data Collections
+                                </CardTitle>
+                                <CardDescription className="text-slate-600">
+                                    View and manage your uploaded Excel data
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {loadingData ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                        <span className="ml-2 text-slate-600">Loading data...</span>
+                                    </div>
+                                ) : sheetData.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {sheetData.map((sheet, index) => (
+                                            <div key={index} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50/50 transition-colors">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex-1">
                                                             <button
                                                                 onClick={() => setSelectedSheet(selectedSheet?.collectionName === sheet.collectionName ? null : sheet)}
                                                                 className="text-left w-full"
@@ -752,79 +798,104 @@ export default function BusinessDetailPage() {
                                             <p className="text-xs text-gray-600">Upload Excel files to get started</p>
                                         </div>
                                     )}
-                                </div>
-                            </div>
-                        </>
+                            </CardContent>
+                        </Card>
                     ) : (
-                        <div className="text-center py-12">
-                            <div className="text-gray-400 text-6xl mb-4">🏢</div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">Business not found</h3>
-                            <p className="text-gray-600 mb-6">The business you're looking for doesn't exist or you don't have access to it.</p>
-                            <button
-                                onClick={() => router.push('/businesses')}
-                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                Back to Businesses
-                            </button>
-                        </div>
-                    )}
-                </div>
+                        <Card className="border-2 border-slate-200/50 bg-gradient-to-br from-white to-slate-50 shadow-xl rounded-xl overflow-hidden">
+                            <CardContent className="pt-6">
+                                <div className="text-center">
+                                    <div className="text-gray-400 text-6xl mb-4">🏢</div>
+                                    <h3 className="text-lg font-medium text-slate-900 mb-2">Business not found</h3>
+                                    <p className="text-slate-600 mb-6">The business you're looking for doesn't exist or you don't have access to it.</p>
+                                    <Button
+                                        onClick={() => router.push('/businesses')}
+                                        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md"
+                                    >
+                                        Back to Businesses
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </>
+                ) : (
+                    <Card className="border-2 border-slate-200/50 bg-gradient-to-br from-white to-slate-50 shadow-xl rounded-xl overflow-hidden">
+                        <CardContent className="pt-6">
+                            <div className="text-center">
+                                <div className="text-gray-400 text-6xl mb-4">🏢</div>
+                                <h3 className="text-lg font-medium text-slate-900 mb-2">Business not found</h3>
+                                <p className="text-slate-600 mb-6">The business you're looking for doesn't exist or you don't have access to it.</p>
+                                <Button
+                                    onClick={() => router.push('/businesses')}
+                                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md"
+                                >
+                                    Back to Businesses
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
             </main>
 
             {/* Edit Business Modal */}
             {showEditModal && business && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-                    <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                        <div className="mt-3">
-                            <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Business</h3>
-                            <form onSubmit={handleEditBusiness}>
-                                <div className="mb-4">
-                                    <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Business Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="edit-name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        required
-                                        maxLength={100}
-                                    />
-                                </div>
-                                <div className="mb-4">
-                                    <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Description
-                                    </label>
-                                    <textarea
-                                        id="edit-description"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        rows={3}
-                                        maxLength={500}
-                                    />
-                                </div>
-                                <div className="flex justify-end space-x-3">
-                                    <button
-                                        type="button"
-                                        onClick={closeModals}
-                                        className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={submitting}
-                                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                                    >
-                                        {submitting ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-2 border-slate-200 shadow-2xl rounded-xl">
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Edit Business</DialogTitle>
+                            <DialogDescription className="text-slate-600">
+                                Update your business information and settings.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form onSubmit={handleEditBusiness} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-name">Business Name *</Label>
+                                <Input
+                                    id="edit-name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    required
+                                    maxLength={100}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-description">Description</Label>
+                                <Textarea
+                                    id="edit-description"
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    rows={3}
+                                    maxLength={500}
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={closeModals}
+                                    className="border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        'Save Changes'
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             )}
         </div>
     );
