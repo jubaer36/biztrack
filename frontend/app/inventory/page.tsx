@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { InventoryAlerts } from "@/components/InventoryAlerts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Package, AlertTriangle, TrendingDown, PackageCheck, RefreshCw, Loader2, Store } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Package, AlertTriangle, TrendingDown, PackageCheck, RefreshCw, Loader2, Store, Search, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import "./inventory.css";
@@ -20,6 +23,48 @@ interface InventoryStats {
   need_reorder: number;
   dead_stock: number;
   optimal_stock: number;
+}
+
+interface Product {
+  product_id: string;
+  product_name: string;
+  description: string | null;
+  price: number;
+  selling_price: number;
+  status: string | null;
+  created_date: string;
+  expense: number | null;
+  stored_location: string | null;
+  category_id: number | null;
+  brand_id: number | null;
+  supplier_id: number | null;
+  product_category: {
+    category_name: string;
+  } | null;
+  product_brand: {
+    brand_name: string;
+  } | null;
+  supplier: {
+    supplier_name: string;
+  } | null;
+}
+
+interface FilterOptions {
+  categories: Array<{
+    category_id: number;
+    category_name: string;
+  }>;
+  brands: Array<{
+    brand_id: number;
+    brand_name: string;
+  }>;
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 interface OptimizationResult {
@@ -82,6 +127,15 @@ const InventoryPage = () => {
   const [optimizing, setOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Products state
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ categories: [], brands: [] });
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 50, total: 0, totalPages: 0 });
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedBrand, setSelectedBrand] = useState<string>("all");
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/auth/login");
@@ -97,8 +151,15 @@ const InventoryPage = () => {
   useEffect(() => {
     if (selectedBusiness) {
       fetchStats();
+      fetchProducts();
     }
   }, [selectedBusiness]);
+
+  useEffect(() => {
+    if (selectedBusiness) {
+      fetchProducts();
+    }
+  }, [searchTerm, selectedCategory, selectedBrand]);
 
   const fetchBusinesses = async () => {
     try {
@@ -189,6 +250,44 @@ const InventoryPage = () => {
       setError(err.message || "Failed to run AI optimization");
     } finally {
       setOptimizing(false);
+    }
+  };
+
+  const fetchProducts = async (page = 1) => {
+    if (!selectedBusiness) return;
+
+    try {
+      setLoadingProducts(true);
+      const token = localStorage.getItem("access_token");
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '50',
+      });
+
+      if (searchTerm) params.append('search', searchTerm);
+      if (selectedCategory && selectedCategory !== "all") params.append('category_id', selectedCategory);
+      if (selectedBrand && selectedBrand !== "all") params.append('brand_id', selectedBrand);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/inventory/products/${selectedBusiness}?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch products");
+
+      const data = await response.json();
+      setProducts(data.products || []);
+      setFilterOptions(data.filters || { categories: [], brands: [] });
+      setPagination(data.pagination || { page: 1, limit: 50, total: 0, totalPages: 0 });
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setError("Failed to load products");
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -320,6 +419,148 @@ const InventoryPage = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Products Table */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Current Inventory</CardTitle>
+                    <CardDescription>View and manage your product inventory</CardDescription>
+                  </div>
+                </div>
+                
+                {/* Search and Filters */}
+                <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                      <Input
+                        placeholder="Search products by name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="All Categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {filterOptions.categories.map((category) => (
+                        <SelectItem key={category.category_id} value={category.category_id.toString()}>
+                          {category.category_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="All Brands" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Brands</SelectItem>
+                      {filterOptions.brands.map((brand) => (
+                        <SelectItem key={brand.brand_id} value={brand.brand_id.toString()}>
+                          {brand.brand_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                {loadingProducts ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No products found
+                  </div>
+                ) : (
+                  <>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Product ID</TableHead>
+                            <TableHead>Product Name</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Brand</TableHead>
+                            <TableHead>Supplier</TableHead>
+                            <TableHead className="text-right">Cost Price</TableHead>
+                            <TableHead className="text-right">Selling Price</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Location</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {products.map((product) => (
+                            <TableRow key={product.product_id}>
+                              <TableCell className="font-mono text-sm">{product.product_id}</TableCell>
+                              <TableCell className="font-medium">{product.product_name}</TableCell>
+                              <TableCell>{product.product_category?.category_name || '-'}</TableCell>
+                              <TableCell>{product.product_brand?.brand_name || '-'}</TableCell>
+                              <TableCell>{product.supplier?.supplier_name || '-'}</TableCell>
+                              <TableCell className="text-right">${product.price?.toFixed(2) || '0.00'}</TableCell>
+                              <TableCell className="text-right">${product.selling_price?.toFixed(2) || '0.00'}</TableCell>
+                              <TableCell>
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  product.status === 'active' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : product.status === 'inactive'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {product.status || 'N/A'}
+                                </span>
+                              </TableCell>
+                              <TableCell>{product.stored_location || '-'}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    {/* Pagination */}
+                    {pagination.totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} products
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchProducts(pagination.page - 1)}
+                            disabled={pagination.page <= 1}
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-sm">
+                            Page {pagination.page} of {pagination.totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchProducts(pagination.page + 1)}
+                            disabled={pagination.page >= pagination.totalPages}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>

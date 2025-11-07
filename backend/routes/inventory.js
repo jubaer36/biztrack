@@ -455,9 +455,143 @@ router.get('/results/:businessId', authenticateUser, async (req, res) => {
 });
 
 /**
- * GET /api/inventory/stats/:businessId
- * Get inventory statistics for a business
+ * GET /api/inventory/products/:businessId
+ * Get products with category, brand, and supplier information for inventory management
  */
+router.get('/products/:businessId', authenticateUser, async (req, res) => {
+    console.log(`[INVENTORY PRODUCTS] Fetching products for businessId: ${req.params.businessId}, userId: ${req.user.id}`);
+    
+    try {
+        const { businessId } = req.params;
+        const userId = req.user.id;
+        const { search, category_id, brand_id, page = 1, limit = 50 } = req.query;
+
+        console.log(`[INVENTORY PRODUCTS] Verifying business ownership...`);
+        // Verify business belongs to user
+        const { data: business, error: businessError } = await supabase
+            .from('businesses')
+            .select('*')
+            .eq('id', businessId)
+            .eq('user_id', userId)
+            .single();
+
+        if (businessError || !business) {
+            console.log(`[INVENTORY PRODUCTS] Business verification failed:`, businessError);
+            return res.status(404).json({ error: 'Business not found or access denied' });
+        }
+        console.log(`[INVENTORY PRODUCTS] Business verified: ${business.name}`);
+
+        console.log(`[INVENTORY PRODUCTS] Building query for products...`);
+        // Build query to fetch products with joined data
+        let query = supabase
+            .from('product')
+            .select(`
+                product_id,
+                product_name,
+                description,
+                price,
+                selling_price,
+                status,
+                created_date,
+                expense,
+                stored_location,
+                category_id,
+                brand_id,
+                supplier_id,
+                product_category:category_id (
+                    category_name
+                ),
+                product_brand:brand_id (
+                    brand_name
+                ),
+                supplier:supplier_id (
+                    supplier_name
+                )
+            `)
+            .eq('business_id', businessId);
+
+        // Apply filters
+        if (category_id) {
+            query = query.eq('category_id', category_id);
+        }
+        if (brand_id) {
+            query = query.eq('brand_id', brand_id);
+        }
+        if (search) {
+            // Search in product name
+            query = query.ilike('product_name', `%${search}%`);
+        }
+
+        // Apply pagination
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        query = query.range(offset, offset + parseInt(limit) - 1);
+
+        console.log(`[INVENTORY PRODUCTS] Executing query...`);
+        const { data: products, error: productsError } = await query;
+
+        if (productsError) {
+            console.error('[INVENTORY PRODUCTS] Error fetching products:', productsError);
+            return res.status(500).json({ error: 'Failed to fetch products' });
+        }
+
+        console.log(`[INVENTORY PRODUCTS] Fetched ${products?.length || 0} products`);
+
+        // Get total count for pagination
+        let countQuery = supabase
+            .from('product')
+            .select('*', { count: 'exact', head: true })
+            .eq('business_id', businessId);
+
+        if (category_id) {
+            countQuery = countQuery.eq('category_id', category_id);
+        }
+        if (brand_id) {
+            countQuery = countQuery.eq('brand_id', brand_id);
+        }
+        if (search) {
+            countQuery = countQuery.or(`product_name.ilike.%${search}%,supplier.supplier_name.ilike.%${search}%`);
+        }
+
+        const { count } = await countQuery;
+
+        console.log(`[INVENTORY PRODUCTS] Total products count: ${count || 0}`);
+
+        // Fetch categories and brands for filter dropdowns
+        console.log(`[INVENTORY PRODUCTS] Fetching filter options...`);
+        const { data: categories } = await supabase
+            .from('product_category')
+            .select('category_id, category_name')
+            .eq('business_id', businessId)
+            .order('category_name');
+
+        const { data: brands } = await supabase
+            .from('product_brand')
+            .select('brand_id, brand_name')
+            .eq('business_id', businessId)
+            .order('brand_name');
+
+        console.log(`[INVENTORY PRODUCTS] Returning products data...`);
+        res.json({
+            success: true,
+            products: products || [],
+            filters: {
+                categories: categories || [],
+                brands: brands || []
+            },
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: count || 0,
+                totalPages: Math.ceil((count || 0) / parseInt(limit))
+            }
+        });
+        console.log(`[INVENTORY PRODUCTS] Products fetch completed for business: ${business.name}`);
+
+    } catch (error) {
+        console.error('[INVENTORY PRODUCTS] Error:', error);
+        res.status(500).json({ error: 'Failed to fetch inventory products' });
+    }
+});
 router.get('/stats/:businessId', authenticateUser, async (req, res) => {
     console.log(`[INVENTORY STATS] Fetching stats for businessId: ${req.params.businessId}, userId: ${req.user.id}`);
     
