@@ -1,6 +1,6 @@
-Investor Name,Contact Person,Email,Phone,Address,Initial Investment,Investment Date,Investment Terms,Status
-Silicon Valley Ventures,James Peterson,j.peterson@svventures.com,+1-555-0301,100 Sand Hill Road Menlo Park CA 94025,500000,2023-01-15,20% equity - 5 year term,Active
-TechGrowth Capital,Lisa Martinez,l.martinez@techgrowth.com,+1-555-0302,200 Innovation Way San Francisco CA 94102,750000,2023-01-15,25% equity - 5 year term,Active
-Golden Gate Investments,Robert Kim,r.kim@goldengate.com,+1-555-0303,300 Financial District San Francisco CA 94111,300000,2023-03-01,15% equity - 7 year term,Active
-Angel Network LLC,Amanda White,a.white@angelnetwork.com,+1-555-0304,400 Startup Avenue Palo Alto CA 94301,200000,2023-06-15,10% equity - 3 year term,Active
-Private Equity Partners,Michael Zhang,m.zhang@pepllc.com,+1-555-0305,500 Investment Plaza New York NY 10005,1000000,2023-09-01,30% equity - 10 year term,Active
+Investor Name          , Contact Person, Email                    , Phone      , Address                                      , Initial Investment, Investment Date, Investment Terms         , Status
+Silicon Valley Ventures, James Peterson, j.peterson@svventures.com, +1-555-0301, 100 Sand Hill Road Menlo Park CA 94025       ,             500000, 2023-01-15     , 20% equity - 5 year term , Active
+TechGrowth Capital     , Lisa Martinez , l.martinez@techgrowth.com, +1-555-0302, 200 Innovation Way San Francisco CA 94102    ,             750000, 2023-01-15     , 25% equity - 5 year term , Active
+Golden Gate Investments, Robert Kim    , r.kim@goldengate.com     , +1-555-0303, 300 Financial District San Francisco CA 94111,             300000, 2023-03-01     , 15% equity - 7 year term , Active
+Angel Network LLC      , Amanda White  , a.white@angelnetwork.com , +1-555-0304, 400 Startup Avenue Palo Alto CA 94301        ,             200000, 2023-06-15     , 10% equity - 3 year term , Active
+Private Equity Partners, Michael Zhang , m.zhang@pepllc.com       , +1-555-0305, 500 Investment Plaza New York NY 10005       ,            1000000, 2023-09-01     , 30% equity - 10 year term, Active

@@ -70,11 +70,11 @@ INSERT INTO public.purchase_order (business_id, supplier_id, order_date, deliver
 ('09c3d58e-b7d1-41f1-be37-e648f559387b', 2, '2024-01-06 10:00:00', '2024-01-20', 'In Transit', 159.98, 'Sports apparel order');
 
 -- Insert sample purchase order items
-INSERT INTO public.purchase_order_items (business_id, purchase_order_id, product_brand_id, quantity_ordered, unit_cost, line_total) VALUES
-('09c3d58e-b7d1-41f1-be37-e648f559387b', 1, 1, 2, 999.99, 1999.98),
-('09c3d58e-b7d1-41f1-be37-e648f559387b', 1, 3, 1, 799.99, 799.99),
-('09c3d58e-b7d1-41f1-be37-e648f559387b', 2, 2, 5, 25.00, 125.00),
-('09c3d58e-b7d1-41f1-be37-e648f559387b', 2, 4, 3, 15.00, 45.00);
+INSERT INTO public.purchase_order_items (business_id, purchase_order_id, product_id, quantity_ordered, unit_cost, line_total) VALUES
+('09c3d58e-b7d1-41f1-be37-e648f559387b', 1, 'PROD001', 1, 999.99, 999.99),
+('09c3d58e-b7d1-41f1-be37-e648f559387b', 1, 'PROD003', 1, 799.99, 799.99),
+('09c3d58e-b7d1-41f1-be37-e648f559387b', 2, 'PROD002', 1, 129.99, 129.99),
+('09c3d58e-b7d1-41f1-be37-e648f559387b', 2, 'PROD004', 1, 29.99, 29.99);
 
 -- Insert sample sales orders
 INSERT INTO public.sales_order (business_id, customer_id, order_date, status, total_amount, shipping_address, product_received_date) VALUES

@@ -100,6 +100,20 @@ const Dashboard = () => {
               gradient="from-primary to-primary-hover"
             />
             <FeatureCard
+              title="Sales Management"
+              description="Record sales, manage customers, and track revenue"
+              icon="cashflow"
+              href="/sales"
+              gradient="from-success to-success/80"
+            />
+            <FeatureCard
+              title="Purchase Orders"
+              description="Record purchases from suppliers and manage procurement"
+              icon="inventory"
+              href="/purchase-orders"
+              gradient="from-warning to-warning/80"
+            />
+            <FeatureCard
               title="Demand Forecasting"
               description="AI predictions with weather, festivals, and market trends"
               icon="forecast"
