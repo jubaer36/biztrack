@@ -21,6 +21,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface Business {
+    id: string;
+    name: string;
+    description: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+interface Business {
   id: string;
   name: string;
   description: string | null;
@@ -55,6 +63,8 @@ interface DashboardMetrics {
 }
 
 const Dashboard = () => {
+
+  
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -381,31 +391,18 @@ const Dashboard = () => {
               Business Intelligence Features
             </h2>
             <Badge className="bg-gradient-to-r from-blue-700 to-indigo-700 text-white border-0">
-              8 Features
+              6 Features
             </Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <FeatureCard
-              title="Data Upload"
-              description="Import Excel/CSV files with AI-powered field mapping"
+              title="Business Data"
+              description="Manipulate and manage your business data effectively"
               icon="upload"
-              href="/businesses"
+              href={businesses.length > 0 ? `/businesses/${businesses[0].id}` : "/businesses"}
               gradient="from-blue-600 to-indigo-600"
             />
-            <FeatureCard
-              title="Sales Management"
-              description="Record sales, manage customers, and track revenue"
-              icon="cashflow"
-              href="/sales"
-              gradient="from-emerald-600 to-teal-600"
-            />
-            <FeatureCard
-              title="Purchase Orders"
-              description="Record purchases from suppliers and manage procurement"
-              icon="inventory"
-              href="/purchase-orders"
-              gradient="from-amber-600 to-orange-600"
-            />
+            
             <FeatureCard
               title="Demand Forecasting"
               description="AI predictions with weather, festivals, and market trends"

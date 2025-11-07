@@ -15,6 +15,8 @@ import {
   TrendingDown,
   ShoppingCart,
   Zap,
+  UploadCloudIcon,
+  DollarSignIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -23,6 +25,15 @@ export const QuickActions = () => {
   const router = useRouter();
 
   const actions = [
+    {
+      icon: DollarSignIcon,
+      label: "My Businesses",
+      description: "Manage your businesses",
+      gradient: "from-emerald-600 to-teal-600",
+      bgColor: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      action: () => router.push("/businesses"),
+    },
     {
       icon: DollarSign,
       label: "Record Sale",
@@ -33,14 +44,15 @@ export const QuickActions = () => {
       action: () => router.push("/sales"),
     },
     {
-      icon: TrendingDown,
-      label: "Add Expense",
-      description: "Track spending",
-      gradient: "from-red-600 to-rose-600",
-      bgColor: "bg-red-50",
-      iconColor: "text-red-600",
-      action: () => router.push("/expenses"),
+      icon: UploadCloudIcon,
+      label: "Import Data",
+      description: "Upload Excel/CSV files",
+      gradient: "from-blue-600 to-indigo-600",
+      bgColor: "bg-blue-50",
+      iconColor: "text-blue-600",
+      action: () => router.push("/businesses"),
     },
+    
     {
       icon: Package,
       label: "Update Inventory",
@@ -50,24 +62,8 @@ export const QuickActions = () => {
       iconColor: "text-amber-600",
       action: () => router.push("/inventory"),
     },
-    {
-      icon: Plus,
-      label: "New Customer",
-      description: "Add customer",
-      gradient: "from-purple-600 to-pink-600",
-      bgColor: "bg-purple-50",
-      iconColor: "text-purple-600",
-      action: () => router.push("/customers/new"),
-    },
-    {
-      icon: ShoppingCart,
-      label: "Add to Cart",
-      description: "Add items to cart",
-      gradient: "from-blue-600 to-cyan-600",
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600",
-      action: () => router.push("/cart"),
-    },
+    
+    
     {
       icon: ShoppingCart,
       label: "Record Purchase",

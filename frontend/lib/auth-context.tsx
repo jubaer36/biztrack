@@ -39,9 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+                method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
+                credentials: 'include',
             });
 
             if (response.ok) {
@@ -69,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ email, password }),
+                credentials: 'include',
             });
 
             const data = await response.json();
@@ -95,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ email, password, name }),
+                credentials: 'include',
             });
 
             const data = await response.json();
@@ -128,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ refresh_token: refreshToken }),
+                    credentials: 'include',
                 });
             }
         } catch (error) {

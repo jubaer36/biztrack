@@ -3,6 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, Store, Database, FileSpreadsheet, Loader2, Eye } from "lucide-react";
 
 interface Business {
     id: string;
@@ -29,6 +36,10 @@ export default function UnifiedBusinessDataPage() {
     const [loadingBusiness, setLoadingBusiness] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Business selection state
+    const [businesses, setBusinesses] = useState<Business[]>([]);
+    const [loadingBusinesses, setLoadingBusinesses] = useState(false);
+
     // PostgreSQL data states
     const [postgresData, setPostgresData] = useState<PostgresTable[]>([]);
     const [loadingPostgres, setLoadingPostgres] = useState(false);
@@ -46,6 +57,12 @@ export default function UnifiedBusinessDataPage() {
             fetchPostgresData();
         }
     }, [user, businessId]);
+
+    useEffect(() => {
+        if (user) {
+            fetchBusinesses();
+        }
+    }, [user]);
 
     const fetchBusiness = async () => {
         try {
@@ -68,6 +85,64 @@ export default function UnifiedBusinessDataPage() {
             setError('Network error while fetching business');
         } finally {
             setLoadingBusiness(false);
+        }
+    };
+
+    const fetchBusinesses = async () => {
+        try {
+            setLoadingBusinesses(true);
+            const token = localStorage.getItem('access_token');
+            
+            // First fetch all businesses
+            const businessesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/businesses`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!businessesResponse.ok) {
+                console.error('Failed to fetch businesses');
+                return;
+            }
+
+            const businessesData = await businessesResponse.json();
+            const allBusinesses = businessesData.businesses || [];
+
+            // Filter businesses that have PostgreSQL data
+            const businessesWithData = [];
+            
+            for (const business of allBusinesses) {
+                // Always include the current business
+                if (business.id === businessId) {
+                    businessesWithData.push(business);
+                    continue;
+                }
+                
+                try {
+                    const dataResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/data/businesses/${business.id}/postgres-data`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                        },
+                    });
+                    
+                    if (dataResponse.ok) {
+                        const data = await dataResponse.json();
+                        // Check if business has any tables with data
+                        if (data.tables && data.tables.length > 0 && data.tables.some((table: any) => table.record_count > 0)) {
+                            businessesWithData.push(business);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error checking data for business ${business.id}:`, error);
+                    // Skip this business if we can't check its data
+                }
+            }
+
+            setBusinesses(businessesWithData);
+        } catch (error) {
+            console.error('Error fetching businesses:', error);
+        } finally {
+            setLoadingBusinesses(false);
         }
     };
 
@@ -111,83 +186,109 @@ export default function UnifiedBusinessDataPage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <nav className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex items-center">
-                            <button
-                                onClick={() => router.push(`/businesses/${businessId}`)}
-                                className="text-indigo-600 hover:text-indigo-900 mr-4"
-                            >
-                                ← Back to Business
-                            </button>
-                            <h1 className="text-xl font-semibold text-gray-900">Unified Business Data</h1>
+            {/* Header */}
+            <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+                <div className="container mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <Button variant="ghost" size="icon" onClick={() => router.push(`/businesses/${businessId}`)}>
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                            <div>
+                                <h1 className="text-2xl font-bold text-foreground">Unified Data</h1>
+                                <p className="text-sm text-muted-foreground">PostgreSQL database tables (read-only)</p>
+                            </div>
                         </div>
-                        <div className="flex items-center space-x-4">
-                            <span className="text-gray-700">Welcome, {user.name || user.email}</span>
+
+                        {/* Business Selector */}
+                        <div className="flex items-center gap-2">
+                            <Store className="h-5 w-5 text-muted-foreground" />
+                            <select
+                                value={businessId}
+                                onChange={(e) => {
+                                    if (e.target.value && e.target.value !== businessId) {
+                                        router.push(`/businesses/${e.target.value}/unified-data`);
+                                    }
+                                }}
+                                className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-[200px] shadow-sm"
+                                disabled={loadingBusinesses}
+                            >
+                                {loadingBusinesses ? (
+                                    <option>Loading...</option>
+                                ) : (
+                                    businesses.map((biz) => (
+                                        <option key={biz.id} value={biz.id}>
+                                            {biz.name}
+                                        </option>
+                                    ))
+                                )}
+                            </select>
                         </div>
                     </div>
                 </div>
-            </nav>
+            </header>
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    {error && (
-                        <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
-                            <div className="flex">
-                                <div className="ml-3">
-                                    <p className="text-sm text-red-700">{error}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+            <main className="container mx-auto px-4 py-8 space-y-6">
+                {error && (
+                    <Card className="border-2 border-red-200/50 bg-gradient-to-br from-red-50 to-white shadow-lg rounded-xl overflow-hidden">
+                        <CardContent className="pt-6">
+                            <p className="text-red-700 font-semibold">{error}</p>
+                        </CardContent>
+                    </Card>
+                )}
 
-                    {loadingBusiness ? (
-                        <div className="text-center py-12">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-                            <p className="mt-4 text-gray-600">Loading business...</p>
-                        </div>
-                    ) : business ? (
-                        <>
-                            <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-                                <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+                {loadingBusiness ? (
+                    <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                ) : business ? (
+                    <>
+                        {/* Business Info Card */}
+                        <Card className="border-2 border-slate-200/50 bg-gradient-to-br from-white to-slate-50 shadow-xl rounded-xl overflow-hidden">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-lg font-medium text-gray-900">{business.name} - Unified Data</h2>
-                                        <p className="mt-1 text-sm text-gray-600">
+                                        <CardTitle className="text-xl font-bold text-slate-800">{business.name} - Unified Data</CardTitle>
+                                        <CardDescription className="text-slate-600">
                                             PostgreSQL database tables (read-only)
-                                        </p>
+                                        </CardDescription>
                                     </div>
-                                    <div className="flex space-x-3">
-                                        <button
+                                    <div className="flex gap-3">
+                                        <Button
                                             onClick={() => router.push(`/businesses/${businessId}/raw-data`)}
-                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md"
                                         >
+                                            <Database className="h-4 w-4 mr-2" />
                                             View Raw Data
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
-                            </div>
+                            </CardHeader>
+                        </Card>
 
-                            {/* PostgreSQL Data Section */}
-                            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                                <div className="px-4 py-5 sm:px-6">
-                                    <h3 className="text-lg font-medium text-gray-900">PostgreSQL Database Tables</h3>
-                                    <p className="mt-1 text-sm text-gray-600">
-                                        View your unified business data from PostgreSQL
-                                    </p>
-                                </div>
-                                <div className="border-t border-gray-200">
-                                    {loadingPostgres ? (
-                                        <div className="text-center py-8">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                                            <p className="mt-2 text-sm text-gray-600">Loading PostgreSQL data...</p>
-                                        </div>
-                                    ) : postgresData.length > 0 ? (
-                                        <div className="divide-y divide-gray-200">
-                                            {postgresData.map((table, index) => (
-                                                <div key={index} className="px-4 py-4 hover:bg-gray-50">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex-1">
+                        {/* PostgreSQL Data Section */}
+                        <Card className="border-2 border-slate-200/50 bg-gradient-to-br from-white to-slate-50 shadow-xl rounded-xl overflow-hidden">
+                            <CardHeader>
+                                <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
+                                    PostgreSQL Database Tables
+                                </CardTitle>
+                                <CardDescription className="text-slate-600">
+                                    View your unified business data from PostgreSQL
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {loadingPostgres ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                        <span className="ml-2 text-slate-600">Loading PostgreSQL data...</span>
+                                    </div>
+                                ) : postgresData.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {postgresData.map((table, index) => (
+                                            <div key={index} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50/50 transition-colors">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex-1">
                                                             <button
                                                                 onClick={() => setSelectedTable(selectedTable?.table_name === table.table_name ? null : table)}
                                                                 className="text-left w-full"
@@ -267,23 +368,27 @@ export default function UnifiedBusinessDataPage() {
                                             <p className="text-xs text-gray-600">No tables were found in the PostgreSQL database for this business</p>
                                         </div>
                                     )}
+                            </CardContent>
+                        </Card>
+                    </>
+                ) : (
+                    <Card className="border-2 border-slate-200/50 bg-gradient-to-br from-white to-slate-50 shadow-xl rounded-xl overflow-hidden">
+                        <CardContent className="pt-6">
+                                <div className="text-center">
+                                    <div className="text-gray-400 text-6xl mb-4">🏢</div>
+                                    <h3 className="text-lg font-medium text-slate-900 mb-2">Business not found</h3>
+                                    <p className="text-slate-600 mb-6">The business you're looking for doesn't exist or you don't have access to it.</p>
+                                    <Button
+                                        onClick={() => router.push('/businesses')}
+                                        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md"
+                                    >
+                                        Back to Businesses
+                                    </Button>
                                 </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="text-center py-12">
-                            <div className="text-gray-400 text-6xl mb-4">🏢</div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">Business not found</h3>
-                            <p className="text-gray-600 mb-6">The business you're looking for doesn't exist or you don't have access to it.</p>
-                            <button
-                                onClick={() => router.push('/businesses')}
-                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                Back to Businesses
-                            </button>
-                        </div>
-                    )}
-                </div>
+                            </CardContent>
+                        </Card>
+                )}
+
             </main>
         </div>
     );
