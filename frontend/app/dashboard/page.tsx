@@ -18,15 +18,15 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/50 animate-gradient">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-700 flex items-center justify-center shadow-lg">
                   <TrendingUp className="h-7 w-7 text-white" />
                 </div>
                 <div className="absolute -top-1 -right-1">
-                  <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
+                  <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
                 </div>
               </div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent">
                   BizTrack
                 </h1>
                 <p className="text-sm font-medium text-slate-600">
@@ -37,7 +37,7 @@ const Dashboard = () => {
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" className="relative hover:bg-blue-50">
                 <Bell className="h-5 w-5 text-slate-600" />
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-gradient-to-br from-red-500 to-rose-500 border-2 border-white">
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-gradient-to-br from-red-600 to-rose-600 border-2 border-white">
                   3
                 </Badge>
               </Button>
@@ -153,7 +153,7 @@ const Dashboard = () => {
             <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
               Business Intelligence Features
             </h2>
-            <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-0">
+            <Badge className="bg-gradient-to-r from-blue-700 to-indigo-700 text-white border-0">
               8 Features
             </Badge>
           </div>
@@ -163,56 +163,56 @@ const Dashboard = () => {
               description="Import Excel/CSV files with AI-powered field mapping"
               icon="upload"
               href="/businesses"
-              gradient="from-blue-500 to-indigo-500"
+              gradient="from-blue-600 to-indigo-600"
             />
             <FeatureCard
               title="Sales Management"
               description="Record sales, manage customers, and track revenue"
               icon="cashflow"
               href="/sales"
-              gradient="from-emerald-500 to-teal-500"
+              gradient="from-emerald-600 to-teal-600"
             />
             <FeatureCard
               title="Purchase Orders"
               description="Record purchases from suppliers and manage procurement"
               icon="inventory"
               href="/purchase-orders"
-              gradient="from-amber-500 to-orange-500"
+              gradient="from-amber-600 to-orange-600"
             />
             <FeatureCard
               title="Demand Forecasting"
               description="AI predictions with weather, festivals, and market trends"
               icon="forecast"
               href="/forecast"
-              gradient="from-purple-500 to-pink-500"
+              gradient="from-purple-600 to-pink-600"
             />
             <FeatureCard
               title="Inventory Management"
               description="Smart stock optimization and reorder recommendations"
               icon="inventory"
               href="/inventory"
-              gradient="from-orange-500 to-red-500"
+              gradient="from-orange-600 to-red-600"
             />
             <FeatureCard
               title="Cash Flow Intelligence"
               description="Real-time monitoring and credit risk analysis"
               icon="cashflow"
               href="/cashflow"
-              gradient="from-green-500 to-emerald-500"
+              gradient="from-green-600 to-emerald-600"
             />
             <FeatureCard
               title="Customer Insights"
               description="RFM segmentation and automated engagement campaigns"
               icon="customers"
               href="/customer-insights"
-              gradient="from-cyan-500 to-blue-500"
+              gradient="from-cyan-600 to-blue-600"
             />
             <FeatureCard
               title="Bizmind"
               description="Natural language queries for business insights"
               icon="ai"
               href="/bizmind"
-              gradient="from-violet-500 to-purple-500"
+              gradient="from-violet-600 to-purple-600"
             />
           </div>
         </div>
@@ -238,11 +238,11 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-8 relative z-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-700 to-indigo-700 flex items-center justify-center shadow-lg">
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <p className="font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
                   BizTrack
                 </p>
                 <p className="text-sm text-slate-600">
