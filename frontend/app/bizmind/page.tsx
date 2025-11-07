@@ -32,6 +32,7 @@ const AIAssistantPage = () => {
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quickQuery, setQuickQuery] = useState<string>("");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -145,8 +146,8 @@ const AIAssistantPage = () => {
   };
 
   const handleQuickQuery = (query: string) => {
-    // This will be handled by passing the query to AIAssistant
-    // For now, we'll just scroll to the chat
+    // Set the query in state and scroll to chat
+    setQuickQuery(query);
     const chatElement = document.querySelector('[data-chat="true"]');
     if (chatElement) {
       chatElement.scrollIntoView({ behavior: 'smooth' });
@@ -389,7 +390,7 @@ const AIAssistantPage = () => {
             </div>
 
             <div data-chat="true">
-              <AIAssistant businessId={selectedBusiness} />
+              <AIAssistant businessId={selectedBusiness} quickQuery={quickQuery} onQueryProcessed={() => setQuickQuery("")} />
             </div>
           </>
         )}
