@@ -224,7 +224,7 @@ async function generateWithOllama(prompt) {
             prompt: prompt,
             stream: false
         }, {
-            timeout: 60000 // 60 second timeout
+            timeout: 600000 // 60 second timeout
         });
         
         return response.data.response;
