@@ -150,10 +150,10 @@ export const AIAssistant = ({ businessId, quickQuery, onQueryProcessed }: AIAssi
                       <Bot className="h-4 w-4" />
                     )}
                   </div>
-                  <div className={`flex-1 p-3 rounded-lg break-words ${
+                  <div className={`p-3 rounded-lg break-words max-w-[75%] ${
                     message.role === "user"
-                      ? "bg-primary text-primary-foreground ml-12"
-                      : "bg-muted mr-12"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
                   }`}>
                     <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                   </div>
@@ -164,7 +164,7 @@ export const AIAssistant = ({ businessId, quickQuery, onQueryProcessed }: AIAssi
                   <div className="p-2 rounded-lg bg-muted flex-shrink-0">
                     <Loader2 className="h-4 w-4 animate-spin" />
                   </div>
-                  <div className="flex-1 p-3 rounded-lg bg-muted mr-12">
+                  <div className="p-3 rounded-lg bg-muted max-w-[75%]">
                     <p className="text-sm text-muted-foreground">Thinking...</p>
                   </div>
                 </div>

@@ -8,9 +8,17 @@ import { QuickActions } from "@/components/QuickActions";
 import { FeatureCard } from "@/components/FeatureCard";
 import { ForecastChart } from "@/components/ForecastChart";
 import { CashFlowPrediction } from "@/components/CashFlowPrediction";
-import { DollarSign, TrendingUp, Package, Users, Menu, Sparkles, Bell, Settings, Store, Loader2 } from "lucide-react";
+import { DollarSign, TrendingUp, Package, Users, Menu, Sparkles, Bell, Settings, Store, Loader2, User, LogOut, HelpCircle, FileText, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Business {
     id: string;
@@ -138,6 +146,11 @@ const Dashboard = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    router.push("/auth/login");
+  };
+
   if (authLoading || loadingBusinesses) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -203,9 +216,44 @@ const Dashboard = () => {
               <Button variant="ghost" size="icon" className="hover:bg-blue-50">
                 <Settings className="h-5 w-5 text-slate-600" />
               </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-blue-50">
-                <Menu className="h-5 w-5 text-slate-600" />
-              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hover:bg-blue-50">
+                    <Menu className="h-5 w-5 text-slate-600" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  {/* <DropdownMenuItem onClick={() => router.push("/businesses")}>
+                    <Store className="mr-2 h-4 w-4" />
+                    <span>My Businesses</span>
+                  </DropdownMenuItem> */}
+                  <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    <span>Analytics</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/docs")}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>Documentation</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/help")}>
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    <span>Help & Support</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
