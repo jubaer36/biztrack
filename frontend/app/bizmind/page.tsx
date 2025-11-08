@@ -347,7 +347,7 @@ const AIAssistantPage = () => {
                   {vectorStoreStatus.timestamp && (
                     <div className="mt-4 pt-4 border-t border-slate-200">
                       <p className="text-xs text-slate-500 flex items-center gap-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 block" />
                         Last updated: {new Date(vectorStoreStatus.timestamp).toLocaleString()}
                       </p>
                     </div>
