@@ -293,10 +293,10 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
                                 <button
                                     onClick={startMapping}
                                     disabled={mapping}
-                                    className={`flex-1 px-4 py-2 rounded-md font-medium transition-all duration-300 ${
+                                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
                                         mapping
-                                            ? 'bg-indigo-600 text-white animate-pulse cursor-not-allowed'
-                                            : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg'
+                                            ? 'bg-slate-600 text-white animate-pulse cursor-not-allowed'
+                                            : 'bg-slate-600 text-white hover:bg-slate-700 hover:shadow-md'
                                     }`}
                                 >
                                     {mapping ? (
@@ -314,7 +314,7 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
                                 <button
                                     onClick={clearMappedData}
                                     disabled={clearing}
-                                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
+                                    className="border-2 border-red-200 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 disabled:opacity-50 font-medium transition-colors"
                                 >
                                     {clearing ? 'Clearing...' : '🗑️ Clear Mapped Data'}
                                 </button>
@@ -323,7 +323,7 @@ export default function DataMapper({ businessId, onMappingComplete }: DataMapper
                             <button
                                 onClick={fetchMappingStatus}
                                 disabled={loading}
-                                className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 disabled:opacity-50"
+                                className="border-2 border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 disabled:opacity-50 font-medium transition-colors"
                             >
                                 🔄 Refresh Status
                             </button>

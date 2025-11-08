@@ -505,28 +505,29 @@ export default function BusinessDetailPage() {
                                         <Button
                                             onClick={openEditModal}
                                             variant="outline"
-                                            className="border-2 border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 font-semibold transition-all duration-300"
+                                            className="border-2 border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium"
                                         >
                                             <Edit className="h-4 w-4 mr-2" />
                                             Edit Business
                                         </Button>
                                         <Button
                                             onClick={handleDeleteBusiness}
-                                            className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white shadow-md font-semibold"
+                                            variant="outline"
+                                            className="border-2 border-red-200 text-red-600 hover:bg-red-50 font-medium"
                                         >
                                             <Trash2 className="h-4 w-4 mr-2" />
                                             Delete Business
                                         </Button>
                                         <Button
                                             onClick={() => router.push(`/businesses/${businessId}/raw-data`)}
-                                            className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-md font-semibold"
+                                            className="bg-slate-600 hover:bg-slate-700 text-white shadow-md font-medium"
                                         >
                                             <Database className="h-4 w-4 mr-2" />
                                             View Raw Data
                                         </Button>
                                         <Button
                                             onClick={() => router.push(`/businesses/${businessId}/unified-data`)}
-                                            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-md font-semibold"
+                                            className="bg-slate-700 hover:bg-slate-800 text-white shadow-md font-medium"
                                         >
                                             <Eye className="h-4 w-4 mr-2" />
                                             View Unified Data
@@ -553,7 +554,7 @@ export default function BusinessDetailPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center gap-4 mb-4">
-                                    <label className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300">
+                                    <label className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 cursor-pointer shadow-md hover:shadow-lg transition-all duration-300">
                                         <Upload className="h-4 w-4 mr-2" />
                                         <input
                                             type="file"
@@ -569,7 +570,7 @@ export default function BusinessDetailPage() {
                                         <Button
                                             onClick={handleDeleteAllData}
                                             variant="outline"
-                                            className="border-2 border-red-200 text-red-600 hover:bg-red-50 font-semibold transition-all duration-300"
+                                            className="border-2 border-red-200 text-red-600 hover:bg-red-50 font-medium"
                                         >
                                             <Trash2 className="h-4 w-4 mr-2" />
                                             Delete All Data

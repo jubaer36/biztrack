@@ -451,7 +451,7 @@ export default function BusinessRawDataPage() {
                                     <div className="flex gap-3">
                                         <Button
                                             onClick={() => router.push(`/businesses/${businessId}/unified-data`)}
-                                            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-md hover:shadow-lg transition-all duration-300 font-semibold"
+                                            className="bg-slate-700 hover:bg-slate-800 text-white shadow-md font-medium"
                                         >
                                             <Eye className="h-4 w-4 mr-2" />
                                             View Unified Data
@@ -480,7 +480,7 @@ export default function BusinessRawDataPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center gap-4 mb-4">
-                                    <label className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 cursor-pointer shadow-md hover:shadow-lg transition-all duration-300">
+                                    <label className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 cursor-pointer shadow-md hover:shadow-lg transition-all duration-300">
                                         <Upload className="h-4 w-4 mr-2" />
                                         <input
                                             type="file"
@@ -496,7 +496,7 @@ export default function BusinessRawDataPage() {
                                         <Button
                                             onClick={handleDeleteAllData}
                                             variant="outline"
-                                            className="border-2 border-red-200 text-red-600 hover:bg-red-50 font-semibold transition-all duration-300"
+                                            className="border-2 border-red-200 text-red-600 hover:bg-red-50 font-medium"
                                         >
                                             <Trash2 className="h-4 w-4 mr-2" />
                                             Delete All Data
@@ -753,7 +753,7 @@ export default function BusinessRawDataPage() {
                                 <p className="text-sm text-slate-600 mb-6 max-w-md mx-auto">The business you're looking for doesn't exist or you don't have access to it.</p>
                                 <Button
                                     onClick={() => router.push('/businesses')}
-                                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-md hover:shadow-lg transition-all duration-300 font-semibold"
+                                    className="bg-slate-600 hover:bg-slate-700 text-white shadow-md font-medium"
                                 >
                                     Back to Businesses
                                 </Button>

@@ -233,7 +233,7 @@ export default function UnifiedBusinessDataPage() {
                                     <div className="flex gap-3">
                                         <Button
                                             onClick={() => router.push(`/businesses/${businessId}/raw-data`)}
-                                            className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-300 font-semibold"
+                                            className="bg-slate-600 hover:bg-slate-700 text-white shadow-md font-medium"
                                         >
                                             <Database className="h-4 w-4 mr-2" />
                                             View Raw Data
@@ -396,7 +396,7 @@ export default function UnifiedBusinessDataPage() {
                                                 <p className="text-sm text-slate-600 mb-6">No tables were found in the PostgreSQL database for this business</p>
                                                 <Button
                                                     onClick={() => router.push(`/businesses/${businessId}/raw-data`)}
-                                                    className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-300 font-semibold"
+                                                    className="bg-slate-600 hover:bg-slate-700 text-white shadow-md font-medium"
                                                 >
                                                     <Database className="h-4 w-4 mr-2" />
                                                     View Raw Data
@@ -418,7 +418,7 @@ export default function UnifiedBusinessDataPage() {
                                 <p className="text-slate-600 mb-6 max-w-md mx-auto">The business you're looking for doesn't exist or you don't have access to it.</p>
                                 <Button
                                     onClick={() => router.push('/businesses')}
-                                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-md hover:shadow-lg transition-all duration-300 font-semibold"
+                                    className="bg-slate-600 hover:bg-slate-700 text-white shadow-md font-medium"
                                 >
                                     Back to Businesses
                                 </Button>
