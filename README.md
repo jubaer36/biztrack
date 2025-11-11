@@ -7,11 +7,17 @@ A full-stack business management application with Next.js frontend and Express.j
 
 ## Features
 
-- **User Authentication**: Register, login, logout, and password reset
-- **Secure Backend**: Express.js API with Supabase authentication
-- **Modern Frontend**: Next.js 14 with TypeScript and Tailwind CSS
-- **Responsive Design**: Mobile-friendly interface
-- **Dashboard**: User dashboard after login
+- **User Authentication**: Register, login, logout, and password reset  
+- **Secure Backend**: Express.js API with Supabase authentication  
+- **Modern Frontend**: Next.js 16 with TypeScript and Tailwind CSS  
+- **Dashboard**: User dashboard with an overview of the business and other feature options for analysis 
+- **Real-time Revenue & Expense Tracking**: Instantly monitor cash flow and financial performance  
+- **AI Financial Analysis & Risk Alerts**: Get intelligent insights and automatic risk notifications  
+- **Cash Flow Management & AI Assistant**: Automate financial decisions and optimize liquidity  
+- **Customer Insights & Retention**: Understand customers deeply with AI-driven segmentation and churn prevention  
+- **Intelligent Data Mapping & Automation**: Transform messy data into structured databases with zero setup  
+- **AI Demand Forecasting**: Predict product demand using history, holidays, and weather trends  
+
 
 ## Tech Stack
 
